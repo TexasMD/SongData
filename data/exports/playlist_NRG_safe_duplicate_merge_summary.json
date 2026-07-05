@@ -1,0 +1,156 @@
+{
+  "updated_at": "2026-07-02T22:05:30.201261+00:00",
+  "playlist": "NRG",
+  "input_rows": 9653,
+  "removed_duplicate_rows": 11,
+  "output_rows": 9642,
+  "merged_groups": 11,
+  "review_groups_not_merged": 1,
+  "merge_log": [
+    {
+      "group_key": "burnin for you|blue oyster cult",
+      "keeper_original_csv_line": 1355,
+      "removed_original_csv_line": 1372,
+      "removed_title": "Burnin' for You",
+      "removed_artist": "Blue Öyster Cult",
+      "removed_album": "Fire of Unknown Origin",
+      "keeper_title": "Burnin' for You",
+      "keeper_artist": "Blue Oyster Cult",
+      "keeper_album": "Fire of Unknown Origin"
+    },
+    {
+      "group_key": "wild boys|duran duran",
+      "keeper_original_csv_line": 2557,
+      "removed_original_csv_line": 2560,
+      "removed_title": "Wild Boys",
+      "removed_artist": "Duran Duran",
+      "removed_album": "Greatest",
+      "keeper_title": "The Wild Boys",
+      "keeper_artist": "Duran Duran",
+      "keeper_album": "Greatest"
+    },
+    {
+      "group_key": "lips like sugar|echo and bunnymen",
+      "keeper_original_csv_line": 2581,
+      "removed_original_csv_line": 2583,
+      "removed_title": "Lips Like Sugar",
+      "removed_artist": "Echo And The Bunnymen",
+      "removed_album": "Echo & The Bunnymen",
+      "keeper_title": "Lips Like Sugar",
+      "keeper_artist": "Echo & The Bunnymen",
+      "keeper_album": "Echo & the Bunnymen (Bonus Tracks Edition) [2004 Remaster]"
+    },
+    {
+      "group_key": "1 crush|garbage",
+      "keeper_original_csv_line": 3108,
+      "removed_original_csv_line": 3106,
+      "removed_title": "#1 Crush",
+      "removed_artist": "Garbage",
+      "removed_album": "Absolute Garbage",
+      "keeper_title": "1 Crush",
+      "keeper_artist": "Garbage",
+      "keeper_album": "Romeo Plus Juliet Soundtrack"
+    },
+    {
+      "group_key": "youve got another thing comin|judas priest",
+      "keeper_original_csv_line": 4090,
+      "removed_original_csv_line": 9162,
+      "removed_title": "You've Got Another Thing Comin'",
+      "removed_artist": "Judas Priest",
+      "removed_album": "",
+      "keeper_title": "You've Got Another Thing Comin",
+      "keeper_artist": "Judas Priest",
+      "keeper_album": "Screaming For Vengeance"
+    },
+    {
+      "group_key": "dr feelgood|motley crue",
+      "keeper_original_csv_line": 5437,
+      "removed_original_csv_line": 9390,
+      "removed_title": "Dr. Feelgood",
+      "removed_artist": "Motley Crue",
+      "removed_album": "",
+      "keeper_title": "Dr. Feelgood",
+      "keeper_artist": "Mötley Crüe",
+      "keeper_album": "Dr. Feelgood"
+    },
+    {
+      "group_key": "kickstart my heart|motley crue",
+      "keeper_original_csv_line": 5438,
+      "removed_original_csv_line": 9378,
+      "removed_title": "Kickstart My Heart",
+      "removed_artist": "Motley Crue",
+      "removed_album": "",
+      "keeper_title": "Kickstart My Heart",
+      "keeper_artist": "Mötley Crüe",
+      "keeper_album": "Dr. Feelgood"
+    },
+    {
+      "group_key": "how soon is now cover|t a t u",
+      "keeper_original_csv_line": 7365,
+      "removed_original_csv_line": 9281,
+      "removed_title": "How Soon Is Now (cover)",
+      "removed_artist": "t.A.T.u",
+      "removed_album": "",
+      "keeper_title": "How Soon Is Now (cover)",
+      "keeper_artist": "t.A.T.u.",
+      "keeper_album": "200 KM/H In The Wrong Lane (10th Anniversary Edition)"
+    },
+    {
+      "group_key": "love shack|b 52s",
+      "keeper_original_csv_line": 7546,
+      "removed_original_csv_line": 7543,
+      "removed_title": "Love Shack",
+      "removed_artist": "The B 52's",
+      "removed_album": "Time Capsule",
+      "keeper_title": "Love Shack",
+      "keeper_artist": "The B-52's",
+      "keeper_album": "Cosmic Thing"
+    },
+    {
+      "group_key": "roam|b 52s",
+      "keeper_original_csv_line": 7544,
+      "removed_original_csv_line": 7549,
+      "removed_title": "Roam",
+      "removed_artist": "The B-52's",
+      "removed_album": "Cosmic Thing (30th Anniversary Expanded Edition)",
+      "keeper_title": "Roam",
+      "keeper_artist": "The B 52's",
+      "keeper_album": "Cosmic Thing"
+    },
+    {
+      "group_key": "867 5309 jenny|tommy tutone",
+      "keeper_original_csv_line": 8400,
+      "removed_original_csv_line": 9319,
+      "removed_title": "867-5309 / Jenny",
+      "removed_artist": "Tommy Tutone",
+      "removed_album": "",
+      "keeper_title": "867 5309 / Jenny",
+      "keeper_artist": "Tommy Tutone",
+      "keeper_album": "867-5309 / Jenny - Single"
+    }
+  ],
+  "review_groups": [
+    {
+      "key": [
+        "cherub rock",
+        "smashing pumpkins"
+      ],
+      "rows": [
+        {
+          "csv_line": 6962,
+          "title": "Cherub Rock",
+          "artist": "Smashing Pumpkins",
+          "album": "Siamese Dream (Deluxe Edition)",
+          "duration": "4:59"
+        },
+        {
+          "csv_line": 8128,
+          "title": "Cherub Rock",
+          "artist": "The Smashing Pumpkins",
+          "album": "Disconnect",
+          "duration": "4:18"
+        }
+      ]
+    }
+  ]
+}

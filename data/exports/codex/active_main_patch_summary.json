@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-07-05T04:13:36.202048+00:00",
+  "active_csv": "D:\\Music\\MusicDB\\data\\processed\\Main_Song_Database.csv",
+  "staged_csv": "D:\\Music\\MusicDB\\data\\staging\\d_music_legacy_merge\\merged_candidate_Main_Song_Database.csv",
+  "active_sha_before": "91c026c9a99f38a11de04a09a754b80f333b93ff4eb600a7d2076fd22694592e",
+  "active_sha_after": "91c026c9a99f38a11de04a09a754b80f333b93ff4eb600a7d2076fd22694592e",
+  "active_database_modified": false,
+  "patch_candidate_csv": "D:\\Music\\MusicDB\\data\\staging\\codex\\active_main_patch_candidate.csv",
+  "patch_candidate_sha256": "9f3b8209c35ce64ebb145c0caf27b3ea8c5940e4e06e5e319754dd2d97e5ce33",
+  "patch_actions_csv": "D:\\Music\\MusicDB\\data\\exports\\codex\\active_main_patch_actions.csv",
+  "skipped_review_csv": "D:\\Music\\MusicDB\\data\\exports\\codex\\active_main_patch_skipped_review.csv",
+  "verification_json": "D:\\Music\\MusicDB\\data\\exports\\codex\\active_main_patch_verification.json",
+  "active_rows": 9672,
+  "candidate_rows": 9672,
+  "active_columns": 58,
+  "candidate_columns": 61,
+  "added_columns": [
+    "Legacy D Music Spotify ID",
+    "Legacy D Music Verification Notes",
+    "Legacy D Music Source Files"
+  ],
+  "unambiguous_song_keys_used_for_provenance": 7251,
+  "patch_action_count": 21791,
+  "skipped_review_count": 218,
+  "action_counts": {
+    "safe_spotify_id_normalization": 1658,
+    "staged_only_metadata_copy": 4933,
+    "staged_provenance_copy": 15200
+  },
+  "field_action_counts": {
+    "BPM": 855,
+    "Energy": 856,
+    "Genre": 75,
+    "Legacy D Music Source Files": 7034,
+    "Legacy D Music Spotify ID": 1863,
+    "Legacy D Music Verification Notes": 6303,
+    "MusicBrainz Verified": 1810,
+    "Spotify Track ID": 1658,
+    "Spotify Verified": 481,
+    "Vibe": 856
+  },
+  "manual_review_inputs": {
+    "spotify_conflict_rows": 82,
+    "active_only_rows": 63,
+    "staged_only_rows": 39
+  },
+  "verification": {
+    "overwrite_violations": 0,
+    "sample_overwrite_violations": [],
+    "staged_only_spotify_track_id_diffs": 1322,
+    "staged_spotify_track_ids_represented_in_candidate": 1322,
+    "staged_spotify_track_id_mismatches": 0,
+    "sample_staged_spotify_track_id_mismatches": []
+  }
+}
