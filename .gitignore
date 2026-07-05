@@ -1,3 +1,20 @@
 __pycache__/
 *.pyc
+
+# Database and large files
+*.csv
 *.sqlite
+
+# Backups and exports
+data/backups/
+data/exports/raw/
+
+# Staging
+data/staging/antigravity/
+data/staging/codex/
+
+# Credentials and environment
+.env
+*.key
+*.token
+*.secret

@@ -6,6 +6,8 @@ import hashlib
 import re
 import csv
 import sqlite3
+from src.quality import generate_quality_report as lib_generate_quality_report, \
+    format_report_as_json, format_report_as_markdown
 
 def normalize_text(text):
     if not text:
@@ -60,7 +62,7 @@ def main():
     if args.command == "verify":
         verify_database(args.db_path)
     elif args.command == "quality-report":
-        generate_quality_report(args.db_path)
+        generate_quality_report(args.db_path, args.write)
     elif args.command == "build-v2":
         build_v2(args.db_path, args.write)
     elif args.command == "review-active-vs-staged":
@@ -144,13 +146,19 @@ def review_active_vs_staged(active_path):
         print(f"    - {sid}")
     if len(missing_in_staged) > 5: print("    ...")
 
-def build_v2(csv_path, write_enabled):
-    sqlite_path = "data/staging/jules/MusicDB.sqlite"
+def build_v2(csv_path, write_enabled, sqlite_path=None):
+    if sqlite_path is None:
+        sqlite_path = "data/staging/jules/MusicDB.sqlite"
     if not write_enabled:
-        print(f"DRY-RUN: Would create SQLite DB at {sqlite_path}")
+        print(f"DRY-RUN: Would rebuild SQLite DB at {sqlite_path}")
         return
 
+    if os.path.exists(sqlite_path):
+        print(f"Deleting existing SQLite DB at {sqlite_path} for a clean rebuild...")
+        os.remove(sqlite_path)
+
     print(f"Creating SQLite DB at {sqlite_path}...")
+    os.makedirs(os.path.dirname(sqlite_path), exist_ok=True)
     conn = sqlite3.connect(sqlite_path)
     cursor = conn.cursor()
 
@@ -188,49 +196,45 @@ def build_v2(csv_path, write_enabled):
     conn.close()
     print("SQLite DB created and populated.")
 
-def generate_quality_report(db_path):
+def generate_quality_report(db_path, write_enabled=False, export_dir=None):
     if not os.path.exists(db_path):
         print(f"Error: Database file not found at {db_path}")
         return
 
-    missing_spotify = 0
-    missing_mb = 0
-    missing_bpm = 0
-    missing_key = 0
-    missing_musician = 0
-    duplicates = {}
-    total_songs = 0
-
+    records = []
     with open(db_path, mode='r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            total_songs += 1
-            if not row.get("spotify_id"): missing_spotify += 1
-            if not row.get("musicbrainz_id"): missing_mb += 1
-            if not row.get("bpm"): missing_bpm += 1
-            if not row.get("key"): missing_key += 1
-            if not row.get("musician_performance"): missing_musician += 1
+            records.append(row)
 
-            # Duplicate detection based on normalized artist/title
-            norm_id = generate_stable_id(row.get("artist", ""), row.get("title", ""))
-            duplicates[norm_id] = duplicates.get(norm_id, 0) + 1
+    report = lib_generate_quality_report(records)
 
-    duplicate_count = sum(1 for count in duplicates.values() if count > 1)
+    print("Quality Report Summary:")
+    print(f"  Total songs: {report['total_records']}")
+    print(f"  Missing Spotify IDs: {report['missing_spotify_ids']}")
+    print(f"  Missing MusicBrainz IDs: {report['missing_musicbrainz_ids']}")
+    print(f"  Missing BPM: {report['missing_bpm']}")
+    print(f"  Missing Key: {report['missing_key']}")
+    print(f"  Missing Musician Performance: {report['missing_musician_performance']}")
+    print(f"  Duplicates detected (artist/title groups): {report['duplicate_review_groups']}")
+    print(f"  Version groups detected: {report['version_review_groups']}")
+    print(f"  Unverified external links: {report['unverified_external_links']}")
+    print(f"  Pending Antigravity suggestions: {report['pending_antigravity_suggestions']}")
 
-    print("Quality Report:")
-    print(f"  Total songs: {total_songs}")
-    print(f"  Missing Spotify IDs: {missing_spotify}")
-    print(f"  Missing MusicBrainz IDs: {missing_mb}")
-    print(f"  Missing BPM: {missing_bpm}")
-    print(f"  Missing Key: {missing_key}")
-    print(f"  Missing Musician Performance: {missing_musician}")
-    print(f"  Duplicates detected (artist/title groups): {duplicate_count}")
+    if write_enabled:
+        if export_dir is None:
+            export_dir = "data/exports/jules"
+        os.makedirs(export_dir, exist_ok=True)
 
-    # Unverified external links (placeholder for prototype)
-    print(f"  Unverified external links: 0 (verification logic pending)")
+        json_path = os.path.join(export_dir, "quality_report.json")
+        with open(json_path, "w") as f:
+            f.write(format_report_as_json(report))
+        print(f"JSON report saved to {json_path}")
 
-    # Pending staged suggestions (placeholder for prototype)
-    print(f"  Pending staged suggestions: 0 (logic pending)")
+        md_path = os.path.join(export_dir, "quality_report.md")
+        with open(md_path, "w") as f:
+            f.write(format_report_as_markdown(report))
+        print(f"Markdown report saved to {md_path}")
 
 def verify_database(db_path):
     if not os.path.exists(db_path):
