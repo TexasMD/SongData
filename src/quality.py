@@ -17,8 +17,8 @@ def generate_quality_report(records: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     for record in records:
         # Use field names from SCHEMA_V2.md (Recordings Layer)
-        has_spotify = bool(record.get("Spotify Track ID"))
-        has_mbid = bool(record.get("MusicBrainz ID"))
+        has_spotify = bool(record.get("Spotify Track ID") or record.get("SpotifyID"))
+        has_mbid = bool(record.get("MusicBrainz ID") or record.get("MusicBrainzID"))
         if not (has_spotify or has_mbid):
             report["missing_spotify_mbid"] += 1
 
@@ -30,7 +30,7 @@ def generate_quality_report(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Musician-performance fields check
         # As per SCHEMA_V2.md, these are things like Tuning, Capo, Difficulty, etc.
         performance_fields = ["Tuning", "Capo", "Difficulty", "Vocal Range", "Instrumentation", "Arrangement"]
-        has_performance = any(bool(record.get(field)) for field in performance_fields)
+        has_performance = any(bool(record.get(field)) for field in performance_fields) or any(k.startswith("Musician_") for k in record.keys())
         if not has_performance:
              report["missing_musician_performance"] += 1
 

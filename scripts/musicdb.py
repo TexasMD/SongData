@@ -18,6 +18,8 @@ def build_v2(args):
     print(f"build-v2: dry-run={not args.write}")
     if args.write:
         print("Executing write operations for build-v2...")
+        # Example logic to trigger SQLite POC
+        # insert_records([])
 
 def rebuild(args):
     """
@@ -93,6 +95,7 @@ def review_active_vs_staged(args):
 
 def quality_report(args):
     print("quality-report...")
+    # Mock records for demonstration
     records = [{"Title": "Test", "Artist": "Test Artist"}]
     report = generate_quality_report(records)
     print(json.dumps(report, indent=2))
