@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+import glob
 
 def test_dry_run_default():
     result = subprocess.run([sys.executable, "scripts/musicdb.py", "build-v2"], capture_output=True, text=True)
@@ -18,16 +19,20 @@ def test_rebuild_dry_run():
     assert "DRY RUN: Would rebuild" in result.stdout
     assert "Successfully rebuilt" not in result.stdout
 
-def test_rebuild_write():
-    # Cleanup previous run if any
+def test_rebuild_write_and_backup():
     output_file = "data/staging/jules/Main_Song_Database.csv"
-    if os.path.exists(output_file):
-        os.remove(output_file)
 
-    result = subprocess.run([sys.executable, "scripts/musicdb.py", "--write", "rebuild"], capture_output=True, text=True)
-    assert "rebuild: dry-run=False" in result.stdout
-    assert "Successfully rebuilt" in result.stdout
+    # Run once to create the file
+    subprocess.run([sys.executable, "scripts/musicdb.py", "--write", "rebuild"], capture_output=True, text=True)
     assert os.path.exists(output_file)
+
+    # Run again to trigger backup
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "--write", "rebuild"], capture_output=True, text=True)
+    assert "Created backup at" in result.stdout
+
+    # Verify backup file exists
+    backups = glob.glob("data/staging/jules/*.bak.csv")
+    assert len(backups) > 0
 
 def test_safety_active_db_not_modified():
     # The active DB is at D:\Music\MusicDB\data\processed\Main_Song_Database.csv
@@ -37,3 +42,24 @@ def test_safety_active_db_not_modified():
     assert "data/staging/jules/Main_Song_Database.csv" in result.stdout
     # Ensure it's NOT writing to 'data/processed' which simulates the active DB location
     assert "data/processed/Main_Song_Database.csv" not in result.stdout
+
+def test_quality_report_dry_run():
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "quality-report"], capture_output=True, text=True)
+    assert "quality-report: dry-run=True" in result.stdout
+    assert "DRY RUN: Would export JSON and Markdown reports" in result.stdout
+    assert "missing_spotify_mbid" in result.stdout
+
+def test_quality_report_write():
+    export_dir = "data/exports"
+    json_file = os.path.join(export_dir, 'quality_report.json')
+    md_file = os.path.join(export_dir, 'quality_report.md')
+
+    if os.path.exists(json_file): os.remove(json_file)
+    if os.path.exists(md_file): os.remove(md_file)
+
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "--write", "quality-report"], capture_output=True, text=True)
+
+    assert "quality-report: dry-run=False" in result.stdout
+    assert "Exported JSON report to" in result.stdout
+    assert os.path.exists(json_file)
+    assert os.path.exists(md_file)

@@ -1,2 +1,14 @@
 __pycache__/
 *.pyc
+
+# Ignore backups
+*.bak
+
+# Ignore CSVs to prevent committing full databases
+*.csv
+!data/staging/recordings_mock.csv
+
+# Ignore exports
+data/exports/*
+!data/exports/.gitkeep
+.env
