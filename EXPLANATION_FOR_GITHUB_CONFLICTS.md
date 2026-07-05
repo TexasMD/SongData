@@ -21,3 +21,25 @@ All conflicts have been successfully resolved in the workspace branch. To update
    `git push origin jules/promote-recordings-layer-17522284852471433934`
 
 Once pushed, GitHub will automatically update PR #7 and show that there are no longer any conflicts.
+
+## Troubleshooting: "The following untracked working tree files would be overwritten by checkout"
+
+If you get an error when trying to checkout the branch (like `error: The following untracked working tree files would be overwritten by checkout`), this means you have local, uncommitted files that happen to have the same names as files in the branch you are trying to switch to.
+
+To fix this, you have a few options:
+
+**Option A (Recommended): Stash your changes**
+This temporarily saves your local untracked files out of the way.
+```bash
+git stash push --include-untracked
+git checkout jules/promote-recordings-layer-17522284852471433934
+# ... proceed with the merge steps above ...
+# (Later, if you want your stashed files back: git stash pop)
+```
+
+**Option B: Delete the conflicting local files**
+If you *don't care* about the local `.gitignore`, `README.md`, or `scripts/musicdb.py` files and know you just want the versions from the branch, you can force the checkout:
+```bash
+git checkout -f jules/promote-recordings-layer-17522284852471433934
+```
+*(Warning: The `-f` flag will permanently overwrite those local files with what's in the branch).*
