@@ -43,3 +43,27 @@ If you *don't care* about the local `.gitignore`, `README.md`, or `scripts/music
 git checkout -f jules/promote-recordings-layer-17522284852471433934
 ```
 *(Warning: The `-f` flag will permanently overwrite those local files with what's in the branch).*
+
+## Troubleshooting: "You do not have the initial commit yet"
+
+If you see this error when running `git stash`, it means your local repository is completely new and doesn't even have a single commit yet, so Git doesn't know how to stash things.
+
+Since you're just starting and there's no history in your local folder to preserve, the easiest way to fix this is to make a "dummy" initial commit, and then force checkout the branch.
+
+Run these commands:
+
+1. Make a quick initial commit so Git has a baseline:
+   `git add .`
+   `git commit -m "Initial local commit"`
+
+2. Fetch the latest from GitHub:
+   `git fetch origin`
+
+3. Force checkout the PR branch (this will overwrite your local files with the ones from the branch):
+   `git checkout -f jules/promote-recordings-layer-17522284852471433934`
+
+4. Merge the agent's resolved branch into yours:
+   `git merge origin/jules-3813165319385525401-6f13af3f`
+
+5. Push the resolved branch back to GitHub:
+   `git push origin jules/promote-recordings-layer-17522284852471433934`
