@@ -16,8 +16,9 @@ def generate_quality_report(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
     for record in records:
-        has_spotify = bool(record.get("SpotifyID"))
-        has_mbid = bool(record.get("MusicBrainzID"))
+        # Use field names from SCHEMA_V2.md (Recordings Layer)
+        has_spotify = bool(record.get("Spotify Track ID") or record.get("SpotifyID"))
+        has_mbid = bool(record.get("MusicBrainz ID") or record.get("MusicBrainzID"))
         if not (has_spotify or has_mbid):
             report["missing_spotify_mbid"] += 1
 
@@ -26,14 +27,17 @@ def generate_quality_report(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         if not (has_bpm or has_key):
             report["missing_bpm_key"] += 1
 
-        # Example check for musician-performance fields
-        has_performance = any(k.startswith("Musician_") for k in record.keys())
+        # Musician-performance fields check
+        # As per SCHEMA_V2.md, these are things like Tuning, Capo, Difficulty, etc.
+        performance_fields = ["Tuning", "Capo", "Difficulty", "Vocal Range", "Instrumentation", "Arrangement"]
+        has_performance = any(bool(record.get(field)) for field in performance_fields) or any(k.startswith("Musician_") for k in record.keys())
         if not has_performance:
              report["missing_musician_performance"] += 1
 
     duplicates = find_duplicates(records)
     report["duplicate_review_groups"] = len(duplicates)
 
+    # Use group_by_version which uses Title + Artist
     versions = group_by_version(records)
     report["version_review_groups"] = len(versions)
 
