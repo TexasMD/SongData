@@ -41,35 +41,35 @@ def compute_key_score(target_key: str, candidate_key: str) -> float:
     """Compute score based on musical key match."""
     if not target_key or not candidate_key:
         return 0.0
-    
+
     t_key = target_key.strip()
     c_key = candidate_key.strip()
-    
+
     if t_key == c_key:
         return 5.0
-    
+
     # Check relative keys
     if RELATIVE_KEYS.get(t_key) == c_key:
         return 3.0
-        
+
     return 0.0
 
 def compute_tag_overlap_score(target_tags: set[str], candidate_tags: set[str]) -> float:
     """Compute Jaccard similarity of tags, mapped to a 10 point scale."""
     if not target_tags or not candidate_tags:
         return 0.0
-    
+
     intersection = len(target_tags.intersection(candidate_tags))
     union = len(target_tags.union(candidate_tags))
-    
+
     if union == 0:
         return 0.0
-        
+
     return 10.0 * (intersection / union)
 
 def find_similar_recordings(
-    target_id: str, 
-    db_path: str, 
+    target_id: str,
+    db_path: str,
     limit: int = 10
 ) -> List[Dict[str, Any]]:
     """
@@ -79,62 +79,62 @@ def find_similar_recordings(
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Fetch target
     cursor.execute("""
-        SELECT r.recording_id, r.title, r.artist, r.bpm, r.key, r.genre, 
+        SELECT r.recording_id, r.title, r.artist, r.bpm, r.key, r.genre,
                s.suggested_mood_tags, s.suggested_event_tags, s.suggested_situation_tags
         FROM recordings r
         LEFT JOIN antigravity_mood_event_suggestions s ON r.recording_id = s.recording_id
         WHERE r.recording_id = ?
     """, (target_id,))
-    
+
     target_row = cursor.fetchone()
     if not target_row:
         conn.close()
         raise ValueError(f"Recording ID {target_id} not found in database.")
-        
+
     target_bpm = target_row['bpm']
     target_key = target_row['key']
     target_genre = target_row['genre']
-    
+
     target_tags = set()
     for tag_col in ['suggested_mood_tags', 'suggested_event_tags', 'suggested_situation_tags']:
         if target_row[tag_col]:
             target_tags.update(parse_tags(target_row[tag_col]))
-            
+
     # Fetch all other candidates
     cursor.execute("""
-        SELECT r.recording_id, r.title, r.artist, r.bpm, r.key, r.genre, 
+        SELECT r.recording_id, r.title, r.artist, r.bpm, r.key, r.genre,
                s.suggested_mood_tags, s.suggested_event_tags, s.suggested_situation_tags
         FROM recordings r
         LEFT JOIN antigravity_mood_event_suggestions s ON r.recording_id = s.recording_id
         WHERE r.recording_id != ?
     """, (target_id,))
-    
+
     candidates = cursor.fetchall()
     conn.close()
-    
+
     results = []
-    
+
     for row in candidates:
         candidate_bpm = row['bpm']
         candidate_key = row['key']
         candidate_genre = row['genre']
-        
+
         candidate_tags = set()
         for tag_col in ['suggested_mood_tags', 'suggested_event_tags', 'suggested_situation_tags']:
             if row[tag_col]:
                 candidate_tags.update(parse_tags(row[tag_col]))
-                
+
         # Calculate scores
         bpm_score = compute_bpm_score(target_bpm, candidate_bpm) if target_bpm else 0.0
         key_score = compute_key_score(target_key, candidate_key)
         genre_score = 5.0 if (target_genre and candidate_genre and target_genre.lower() == candidate_genre.lower()) else 0.0
         tag_score = compute_tag_overlap_score(target_tags, candidate_tags)
-        
+
         total_score = bpm_score + key_score + genre_score + tag_score
-        
+
         # Only include if there's some meaningful similarity
         if total_score > 3.0:
             results.append({
@@ -152,17 +152,17 @@ def find_similar_recordings(
                     "tags": round(tag_score, 2)
                 }
             })
-            
+
     # Sort by total score descending
     results.sort(key=lambda x: x["similarity_score"], reverse=True)
-    
+
     return results[:limit]
 
 if __name__ == "__main__":
     # Simple self-test
     import sys
     from pathlib import Path
-    
+
     db_path = Path(__file__).resolve().parents[2] / "data" / "staging" / "jules" / "music_antigravity_review.sqlite"
     if db_path.exists() and len(sys.argv) > 1:
         test_id = sys.argv[1]
