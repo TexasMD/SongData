@@ -5,13 +5,14 @@ from .stable_id import generate_stable_id
 
 DB_PATH = "data/staging/jules/MusicDB.sqlite"
 
+
 def init_db(db_path: str = DB_PATH):
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     # 1. Recordings
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS recordings (
             recording_id TEXT PRIMARY KEY,
             song_id TEXT NOT NULL,
@@ -22,10 +23,10 @@ def init_db(db_path: str = DB_PATH):
             musicbrainz_id TEXT,
             isrc TEXT
         )
-    ''')
+    """)
 
     # 2. External Links
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS external_links (
             recording_id TEXT PRIMARY KEY,
             shs_link TEXT,
@@ -34,10 +35,10 @@ def init_db(db_path: str = DB_PATH):
             video_link TEXT,
             FOREIGN KEY (recording_id) REFERENCES recordings(recording_id)
         )
-    ''')
+    """)
 
     # 3. Performance Metadata
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS performance_metadata (
             recording_id TEXT PRIMARY KEY,
             bpm REAL,
@@ -50,10 +51,10 @@ def init_db(db_path: str = DB_PATH):
             arrangement TEXT,
             FOREIGN KEY (recording_id) REFERENCES recordings(recording_id)
         )
-    ''')
+    """)
 
     # 4. Tags & Playlists
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS tags_playlists (
             recording_id TEXT PRIMARY KEY,
             mood TEXT,
@@ -64,10 +65,10 @@ def init_db(db_path: str = DB_PATH):
             playlists TEXT,
             FOREIGN KEY (recording_id) REFERENCES recordings(recording_id)
         )
-    ''')
+    """)
 
     # Create a unified view for the UI
-    cursor.execute('''
+    cursor.execute("""
         CREATE VIEW IF NOT EXISTS view_search AS
         SELECT
             r.recording_id,
@@ -90,10 +91,11 @@ def init_db(db_path: str = DB_PATH):
         LEFT JOIN performance_metadata pm ON r.recording_id = pm.recording_id
         LEFT JOIN tags_playlists tp ON r.recording_id = tp.recording_id
         LEFT JOIN external_links el ON r.recording_id = el.recording_id
-    ''')
+    """)
 
     conn.commit()
     conn.close()
+
 
 def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
     init_db(db_path)
@@ -102,73 +104,105 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
 
 
 
+    recordings_data = []
+    external_links_data = []
+    performance_metadata_data = []
+    tags_playlists_data = []
+
     for record in records:
         title = record.get("Title", "")
         artist = record.get("Artist", "")
         version = record.get("Version", "")
 
-        recording_id = record.get("Recording ID") or generate_stable_id(title, artist, version)
+        recording_id = record.get("Recording ID") or generate_stable_id(
+            title, artist, version
+        )
         song_id = record.get("Song ID") or generate_stable_id(title, artist, "")
 
-        # Recordings
-        cursor.execute('''
-            INSERT OR REPLACE INTO recordings (recording_id, song_id, title, artist, version, spotify_track_id, musicbrainz_id, isrc)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            recording_id,
-            song_id,
-            title,
-            artist,
-            version,
-            record.get("Spotify Track ID"),
-            record.get("MusicBrainz ID"),
-            record.get("ISRC")
-        ))
+        recordings_data.append(
+            (
+                recording_id,
+                song_id,
+                title,
+                artist,
+                version,
+                record.get("Spotify Track ID"),
+                record.get("MusicBrainz ID"),
+                record.get("ISRC"),
+            )
+        )
 
-        # External Links
-        cursor.execute('''
-            INSERT OR REPLACE INTO external_links (recording_id, shs_link, whosampled_link, ug_link, video_link)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            recording_id,
-            record.get("SHS Link"),
-            record.get("WhoSampled Link"),
-            record.get("UG Link"),
-            record.get("Video Link")
-        ))
+        external_links_data.append(
+            (
+                recording_id,
+                record.get("SHS Link"),
+                record.get("WhoSampled Link"),
+                record.get("UG Link"),
+                record.get("Video Link"),
+            )
+        )
 
-        # Performance Metadata
-        cursor.execute('''
-            INSERT OR REPLACE INTO performance_metadata (recording_id, bpm, key, tuning, capo, difficulty, vocal_range, instrumentation, arrangement)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            recording_id,
-            record.get("BPM"),
-            record.get("Key"),
-            record.get("Tuning"),
-            record.get("Capo"),
-            record.get("Difficulty"),
-            record.get("Vocal Range"),
-            record.get("Instrumentation"),
-            record.get("Arrangement")
-        ))
+        performance_metadata_data.append(
+            (
+                recording_id,
+                record.get("BPM"),
+                record.get("Key"),
+                record.get("Tuning"),
+                record.get("Capo"),
+                record.get("Difficulty"),
+                record.get("Vocal Range"),
+                record.get("Instrumentation"),
+                record.get("Arrangement"),
+            )
+        )
 
-        # Tags & Playlists
-        cursor.execute('''
-            INSERT OR REPLACE INTO tags_playlists (recording_id, mood, event, situation, setlist_role, energy, playlists)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            recording_id,
-            record.get("Mood"),
-            record.get("Event"),
-            record.get("Situation"),
-            record.get("Setlist Role"),
-            record.get("Energy"),
-            record.get("Playlists")
-        ))
+        tags_playlists_data.append(
+            (
+                recording_id,
+                record.get("Mood"),
+                record.get("Event"),
+                record.get("Situation"),
+                record.get("Setlist Role"),
+                record.get("Energy"),
+                record.get("Playlists"),
+            )
+        )
+
+    cursor.executemany(
+        """
+        INSERT OR REPLACE INTO recordings (recording_id, song_id, title, artist, version, spotify_track_id, musicbrainz_id, isrc)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+        recordings_data,
+    )
+
+    cursor.executemany(
+        """
+        INSERT OR REPLACE INTO external_links (recording_id, shs_link, whosampled_link, ug_link, video_link)
+        VALUES (?, ?, ?, ?, ?)
+    """,
+        external_links_data,
+    )
+
+    cursor.executemany(
+        """
+        INSERT OR REPLACE INTO performance_metadata (recording_id, bpm, key, tuning, capo, difficulty, vocal_range, instrumentation, arrangement)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+        performance_metadata_data,
+    )
+
+    cursor.executemany(
+        """
+        INSERT OR REPLACE INTO tags_playlists (recording_id, mood, event, situation, setlist_role, energy, playlists)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+        tags_playlists_data,
+    )
 
     conn.commit()
     conn.close()
+
 
 def insert_records(records: List[Dict[str, Any]]):
     # Backward compatibility for existing poc.db usage if any
