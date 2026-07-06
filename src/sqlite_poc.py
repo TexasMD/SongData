@@ -1,10 +1,8 @@
 import sqlite3
 import os
 from typing import List, Dict, Any
-from .stable_id import generate_stable_id
 
 DB_PATH = "data/staging/jules/MusicDB.sqlite"
-
 
 def init_db(db_path: str = DB_PATH):
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -12,7 +10,7 @@ def init_db(db_path: str = DB_PATH):
     cursor = conn.cursor()
 
     # 1. Recordings
-    cursor.execute("""
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS recordings (
             recording_id TEXT PRIMARY KEY,
             song_id TEXT NOT NULL,
@@ -23,10 +21,10 @@ def init_db(db_path: str = DB_PATH):
             musicbrainz_id TEXT,
             isrc TEXT
         )
-    """)
+    ''')
 
     # 2. External Links
-    cursor.execute("""
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS external_links (
             recording_id TEXT PRIMARY KEY,
             shs_link TEXT,
@@ -35,10 +33,10 @@ def init_db(db_path: str = DB_PATH):
             video_link TEXT,
             FOREIGN KEY (recording_id) REFERENCES recordings(recording_id)
         )
-    """)
+    ''')
 
     # 3. Performance Metadata
-    cursor.execute("""
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS performance_metadata (
             recording_id TEXT PRIMARY KEY,
             bpm REAL,
@@ -51,10 +49,10 @@ def init_db(db_path: str = DB_PATH):
             arrangement TEXT,
             FOREIGN KEY (recording_id) REFERENCES recordings(recording_id)
         )
-    """)
+    ''')
 
     # 4. Tags & Playlists
-    cursor.execute("""
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS tags_playlists (
             recording_id TEXT PRIMARY KEY,
             mood TEXT,
@@ -65,10 +63,10 @@ def init_db(db_path: str = DB_PATH):
             playlists TEXT,
             FOREIGN KEY (recording_id) REFERENCES recordings(recording_id)
         )
-    """)
+    ''')
 
     # Create a unified view for the UI
-    cursor.execute("""
+    cursor.execute('''
         CREATE VIEW IF NOT EXISTS view_search AS
         SELECT
             r.recording_id,
@@ -91,23 +89,17 @@ def init_db(db_path: str = DB_PATH):
         LEFT JOIN performance_metadata pm ON r.recording_id = pm.recording_id
         LEFT JOIN tags_playlists tp ON r.recording_id = tp.recording_id
         LEFT JOIN external_links el ON r.recording_id = el.recording_id
-    """)
+    ''')
 
     conn.commit()
     conn.close()
-
 
 def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
     init_db(db_path)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-
-
-    recordings_data = []
-    external_links_data = []
-    performance_metadata_data = []
-    tags_playlists_data = []
+    from .stable_id import generate_stable_id
 
     recordings_data = []
     external_links_data = []
@@ -119,9 +111,7 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
         artist = record.get("Artist", "")
         version = record.get("Version", "")
 
-        recording_id = record.get("Recording ID") or generate_stable_id(
-            title, artist, version
-        )
+        recording_id = record.get("Recording ID") or generate_stable_id(title, artist, version)
         song_id = record.get("Song ID") or generate_stable_id(title, artist, "")
 
         recordings_data.append((
@@ -191,7 +181,6 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
 
     conn.commit()
     conn.close()
-
 
 def insert_records(records: List[Dict[str, Any]]):
     # Backward compatibility for existing poc.db usage if any
