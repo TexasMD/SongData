@@ -12,7 +12,7 @@ from src.stable_id import generate_stable_id
 from src.duplicates import find_duplicates, group_by_version
 from src.schema import validate_record
 from src.quality import generate_quality_report
-from src.sqlite_poc import insert_records, insert_v2_records, DB_PATH
+from src.sqlite_poc import insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
