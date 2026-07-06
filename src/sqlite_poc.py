@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from typing import List, Dict, Any
+from .stable_id import generate_stable_id
 
 DB_PATH = "data/staging/jules/MusicDB.sqlite"
 
@@ -99,7 +100,7 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    from .stable_id import generate_stable_id
+
 
     for record in records:
         title = record.get("Title", "")
