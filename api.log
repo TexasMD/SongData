@@ -1,0 +1,22 @@
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [218419]
+INFO:     Started server process [241406]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:36248 - "GET /api/recordings?limit=500 HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:36248 - "GET /api/recordings?limit=500 HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:36892 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36908 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37024 - "GET /api/similarity/rec3?limit=30 HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:49442 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49442 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47788 - "GET /api/similarity/rec3?limit=30 HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:47532 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47532 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56970 - "GET /api/similarity/rec3?limit=30 HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:44916 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44916 - "GET /api/recordings?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49738 - "GET /api/similarity/rec3?limit=30 HTTP/1.1" 200 OK
