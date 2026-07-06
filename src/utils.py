@@ -1,6 +1,8 @@
 import os
+import csv
 import shutil
 from datetime import datetime
+from typing import List, Dict, Any
 
 def backup_file(filepath: str) -> str:
     """
@@ -20,8 +22,6 @@ def backup_file(filepath: str) -> str:
 
     shutil.copy2(filepath, backup_path)
     return backup_path
-import csv
-from typing import List, Dict, Any
 
 def read_csv(filepath: str) -> List[Dict[str, Any]]:
     """

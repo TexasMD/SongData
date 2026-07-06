@@ -50,7 +50,7 @@ def test_quality_report_dry_run():
     assert "missing_spotify_mbid" in result.stdout
 
 def test_quality_report_write():
-    export_dir = "data/exports"
+    export_dir = "data/exports/jules"
     json_file = os.path.join(export_dir, 'quality_report.json')
     md_file = os.path.join(export_dir, 'quality_report.md')
 

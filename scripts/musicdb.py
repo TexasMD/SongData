@@ -106,7 +106,7 @@ def quality_report(args):
     report = generate_quality_report(records)
 
     if args.write:
-        export_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'exports')
+        export_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'exports', 'jules')
         os.makedirs(export_dir, exist_ok=True)
 
         json_file = os.path.join(export_dir, 'quality_report.json')
@@ -122,7 +122,7 @@ def quality_report(args):
                 f.write(f"- **{k}**: {v}\n")
         print(f"Exported Markdown report to {md_file}")
     else:
-        print("DRY RUN: Would export JSON and Markdown reports to data/exports")
+        print("DRY RUN: Would export JSON and Markdown reports to data/exports/jules")
         print("Report contents:")
         print(json.dumps(report, indent=2))
 
@@ -149,7 +149,7 @@ def verify(args):
 
 def export_view(args):
     print("export-view...")
-    export_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'exports', 'jules')
+    export_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'exports', 'jules', 'jules')
     os.makedirs(export_dir, exist_ok=True)
     export_file = os.path.join(export_dir, 'export.json')
 
