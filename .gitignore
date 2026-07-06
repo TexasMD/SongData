@@ -11,4 +11,9 @@ __pycache__/
 # Ignore exports
 data/exports/*
 !data/exports/.gitkeep
+!data/exports/jules/search_ui_mvp_summary.md
 .env
+
+# Ignore SQLite databases
+*.sqlite
+*.db
