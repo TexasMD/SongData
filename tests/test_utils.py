@@ -1,47 +1,42 @@
 import os
-import pytest
-import csv
-from src.utils import read_csv
+from unittest.mock import patch
+from datetime import datetime
+from src.utils import backup_file
 
-def test_read_csv_valid_file(tmp_path):
-    # Create a temporary CSV file
-    csv_file = tmp_path / "test.csv"
-    with open(csv_file, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["name", "age", "city"])
-        writer.writerow(["Alice", "30", "New York"])
-        writer.writerow(["Bob", "25", "Los Angeles"])
+def test_backup_file_success(tmp_path):
+    # Create a dummy file to backup
+    test_file = tmp_path / "test_data.txt"
+    test_file.write_text("dummy content")
 
-    # Test read_csv
-    records = read_csv(str(csv_file))
+    # Define a fixed time for our mock
+    fixed_time = datetime(2024, 1, 1, 12, 30, 45)
+    expected_timestamp = fixed_time.strftime("%Y%m%d_%H%M%S")
+    expected_backup_name = f"test_data_{expected_timestamp}.bak.txt"
+    expected_backup_path = os.path.join(str(tmp_path), expected_backup_name)
 
-    # Assertions
-    assert len(records) == 2
-    assert records[0]["name"] == "Alice"
-    assert records[0]["age"] == "30"
-    assert records[0]["city"] == "New York"
-    assert records[1]["name"] == "Bob"
-    assert records[1]["age"] == "25"
-    assert records[1]["city"] == "Los Angeles"
+    # Patch datetime inside src.utils so it uses our fixed time
+    with patch("src.utils.datetime") as mock_datetime:
+        mock_datetime.now.return_value = fixed_time
 
-def test_read_csv_empty_file_with_headers(tmp_path):
-    # Create an empty CSV file with headers
-    csv_file = tmp_path / "test_empty.csv"
-    with open(csv_file, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["name", "age", "city"])
+        # Call the function
+        actual_backup_path = backup_file(str(test_file))
 
-    # Test read_csv
-    records = read_csv(str(csv_file))
+        # Verify the returned path is correct
+        assert actual_backup_path == expected_backup_path
 
-    # Assertions
-    assert len(records) == 0
-    assert records == []
+        # Verify the backup file was actually created
+        assert os.path.exists(actual_backup_path)
 
-def test_read_csv_non_existent_file():
-    # Test read_csv with a file that doesn't exist
-    records = read_csv("non_existent_file.csv")
+        # Verify the content is the same
+        with open(actual_backup_path, "r") as f:
+            assert f.read() == "dummy content"
 
-    # Assertions
-    assert len(records) == 0
-    assert records == []
+def test_backup_file_nonexistent(tmp_path):
+    # Pass a path that does not exist
+    non_existent_file = str(tmp_path / "does_not_exist.txt")
+
+    # Call the function
+    result = backup_file(non_existent_file)
+
+    # It should return an empty string
+    assert result == ""
