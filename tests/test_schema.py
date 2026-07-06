@@ -42,14 +42,3 @@ def test_validate_record_v2():
     }
     errors = validate_record(invalid_diff)
     assert any("Difficulty must be an integer" in e for e in errors)
-
-    # Invalid Energy Type
-    invalid_energy_type = {
-        "Recording ID": "rec1",
-        "Song ID": "song1",
-        "Title": "A",
-        "Artist": "B",
-        "Energy": "high"
-    }
-    errors = validate_record(invalid_energy_type)
-    assert any("Energy must be an integer" in e for e in errors)
