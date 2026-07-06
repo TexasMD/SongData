@@ -109,6 +109,11 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
     performance_metadata_data = []
     tags_playlists_data = []
 
+    recordings_data = []
+    external_links_data = []
+    performance_metadata_data = []
+    tags_playlists_data = []
+
     for record in records:
         title = record.get("Title", "")
         artist = record.get("Artist", "")
@@ -119,86 +124,70 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
         )
         song_id = record.get("Song ID") or generate_stable_id(title, artist, "")
 
-        recordings_data.append(
-            (
-                recording_id,
-                song_id,
-                title,
-                artist,
-                version,
-                record.get("Spotify Track ID"),
-                record.get("MusicBrainz ID"),
-                record.get("ISRC"),
-            )
-        )
+        recordings_data.append((
+            recording_id,
+            song_id,
+            title,
+            artist,
+            version,
+            record.get("Spotify Track ID"),
+            record.get("MusicBrainz ID"),
+            record.get("ISRC")
+        ))
 
-        external_links_data.append(
-            (
-                recording_id,
-                record.get("SHS Link"),
-                record.get("WhoSampled Link"),
-                record.get("UG Link"),
-                record.get("Video Link"),
-            )
-        )
+        external_links_data.append((
+            recording_id,
+            record.get("SHS Link"),
+            record.get("WhoSampled Link"),
+            record.get("UG Link"),
+            record.get("Video Link")
+        ))
 
-        performance_metadata_data.append(
-            (
-                recording_id,
-                record.get("BPM"),
-                record.get("Key"),
-                record.get("Tuning"),
-                record.get("Capo"),
-                record.get("Difficulty"),
-                record.get("Vocal Range"),
-                record.get("Instrumentation"),
-                record.get("Arrangement"),
-            )
-        )
+        performance_metadata_data.append((
+            recording_id,
+            record.get("BPM"),
+            record.get("Key"),
+            record.get("Tuning"),
+            record.get("Capo"),
+            record.get("Difficulty"),
+            record.get("Vocal Range"),
+            record.get("Instrumentation"),
+            record.get("Arrangement")
+        ))
 
-        tags_playlists_data.append(
-            (
-                recording_id,
-                record.get("Mood"),
-                record.get("Event"),
-                record.get("Situation"),
-                record.get("Setlist Role"),
-                record.get("Energy"),
-                record.get("Playlists"),
-            )
-        )
+        tags_playlists_data.append((
+            recording_id,
+            record.get("Mood"),
+            record.get("Event"),
+            record.get("Situation"),
+            record.get("Setlist Role"),
+            record.get("Energy"),
+            record.get("Playlists")
+        ))
 
-    cursor.executemany(
-        """
+    # Recordings
+    cursor.executemany('''
         INSERT OR REPLACE INTO recordings (recording_id, song_id, title, artist, version, spotify_track_id, musicbrainz_id, isrc)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """,
-        recordings_data,
-    )
+    ''', recordings_data)
 
-    cursor.executemany(
-        """
+    # External Links
+    cursor.executemany('''
         INSERT OR REPLACE INTO external_links (recording_id, shs_link, whosampled_link, ug_link, video_link)
         VALUES (?, ?, ?, ?, ?)
-    """,
-        external_links_data,
-    )
+    ''', external_links_data)
 
-    cursor.executemany(
-        """
+    # Performance Metadata
+    cursor.executemany('''
         INSERT OR REPLACE INTO performance_metadata (recording_id, bpm, key, tuning, capo, difficulty, vocal_range, instrumentation, arrangement)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """,
-        performance_metadata_data,
-    )
+    ''', performance_metadata_data)
 
-    cursor.executemany(
-        """
+    # Tags & Playlists
+    cursor.executemany('''
         INSERT OR REPLACE INTO tags_playlists (recording_id, mood, event, situation, setlist_role, energy, playlists)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    """,
-        tags_playlists_data,
-    )
+    ''', tags_playlists_data)
 
     conn.commit()
     conn.close()
