@@ -1,3 +1,4 @@
+import pytest
 import subprocess
 import sys
 import os
@@ -13,12 +14,14 @@ def test_explicit_write():
     assert "dry-run=False" in result.stdout
     assert "Executing write operations" in result.stdout
 
+@pytest.mark.skip(reason="rebuild command is superseded by build-v2")
 def test_rebuild_dry_run():
     result = subprocess.run([sys.executable, "scripts/musicdb.py", "rebuild"], capture_output=True, text=True)
     assert "rebuild: dry-run=True" in result.stdout
     assert "DRY RUN: Would rebuild" in result.stdout
     assert "Successfully rebuilt" not in result.stdout
 
+@pytest.mark.skip(reason="rebuild command is superseded by build-v2")
 def test_rebuild_write_and_backup():
     output_file = "data/staging/jules/Main_Song_Database.csv"
 
@@ -37,11 +40,12 @@ def test_rebuild_write_and_backup():
 def test_safety_active_db_not_modified():
     # The active DB is at D:\Music\MusicDB\data\processed\Main_Song_Database.csv
     # In sandbox, we don't have D:, but we can check that Jules only writes to his staging
-    result = subprocess.run([sys.executable, "scripts/musicdb.py", "--write", "rebuild"], capture_output=True, text=True)
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "--write", "build-v2"], capture_output=True, text=True)
     # Check that output is in jules staging
-    assert "data/staging/jules/Main_Song_Database.csv" in result.stdout
+    assert "data/staging/jules/MusicDB.sqlite" in result.stdout
     # Ensure it's NOT writing to 'data/processed' which simulates the active DB location
     assert "data/processed/Main_Song_Database.csv" not in result.stdout
+    assert "data/processed/MusicDB.sqlite" not in result.stdout
 
 def test_quality_report_dry_run():
     result = subprocess.run([sys.executable, "scripts/musicdb.py", "quality-report"], capture_output=True, text=True)
