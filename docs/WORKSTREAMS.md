@@ -129,8 +129,9 @@ Deliverables:
 ## Integration Cadence
 
 1. Each agent writes staged outputs.
-2. Codex reviews staged outputs.
-3. Codex creates a promotion candidate.
-4. A backup is made.
-5. A dry-run summary is generated.
-6. Codex promotes to the active DB only after review.
+2. Agents post cross-agent questions or requests through the GitHub handoff format in `docs/AGENT_MESSAGE_BRIDGE.md`.
+3. Codex reviews staged outputs.
+4. Codex creates a promotion candidate.
+5. A backup is made.
+6. A dry-run summary is generated.
+7. Codex promotes to the active DB only after review.

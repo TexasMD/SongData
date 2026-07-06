@@ -20,6 +20,7 @@ Use this repo to coordinate work between Codex, Antigravity, and Jules:
 
 - task ownership
 - issue tracking
+- agent-to-agent handoffs through GitHub issues and PR comments
 - schema decisions
 - scripts and tests
 - documentation
@@ -41,4 +42,4 @@ Use this repo to coordinate work between Codex, Antigravity, and Jules:
 - Antigravity: enrichment worker for tags, performance metadata, and external-link verification.
 - Jules: automation, tests, CLI, quality reports, and SQLite prototype.
 
-Start with `docs/COORDINATION.md` and `docs/WORKSTREAMS.md`.
+Start with `docs/COORDINATION.md`, `docs/WORKSTREAMS.md`, and `docs/AGENT_MESSAGE_BRIDGE.md`.

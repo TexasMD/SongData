@@ -14,6 +14,8 @@ Only Codex promotes changes into the active main database.
 
 Antigravity and Jules should produce staged outputs, scripts, tests, docs, or reports. They should not directly overwrite the active CSV.
 
+Antigravity and Jules should not depend on direct private messages. Use GitHub issues or PR comments for agent-to-agent handoffs, following `docs/AGENT_MESSAGE_BRIDGE.md`.
+
 ## Required Safety Rules
 
 - Make a backup before any write to `data\processed\Main_Song_Database.csv`.
