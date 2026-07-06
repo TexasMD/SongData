@@ -2,7 +2,6 @@ import sqlite3
 import csv
 import os
 import argparse
-import sys
 
 # Define file paths
 MOOD_CSV = "data/staging/antigravity/mood_event_tag_suggestions.csv"
