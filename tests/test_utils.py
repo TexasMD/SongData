@@ -1,5 +1,3 @@
-import os
-import pytest
 from src.utils import read_csv
 
 def test_read_csv_non_existent_file():
