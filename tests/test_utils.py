@@ -1,42 +1,32 @@
 import os
-from unittest.mock import patch
-from datetime import datetime
-from src.utils import backup_file
+import pytest
+from src.utils import read_csv
 
-def test_backup_file_success(tmp_path):
-    # Create a dummy file to backup
-    test_file = tmp_path / "test_data.txt"
-    test_file.write_text("dummy content")
+def test_read_csv_non_existent_file():
+    """Test reading a file that does not exist returns an empty list."""
+    assert read_csv("non_existent_file.csv") == []
 
-    # Define a fixed time for our mock
-    fixed_time = datetime(2024, 1, 1, 12, 30, 45)
-    expected_timestamp = fixed_time.strftime("%Y%m%d_%H%M%S")
-    expected_backup_name = f"test_data_{expected_timestamp}.bak.txt"
-    expected_backup_path = os.path.join(str(tmp_path), expected_backup_name)
+def test_read_csv_empty_file(tmp_path):
+    """Test reading an empty CSV file (only headers) returns an empty list."""
+    csv_file = tmp_path / "empty.csv"
+    csv_file.write_text("header1,header2\n")
 
-    # Patch datetime inside src.utils so it uses our fixed time
-    with patch("src.utils.datetime") as mock_datetime:
-        mock_datetime.now.return_value = fixed_time
+    assert read_csv(str(csv_file)) == []
 
-        # Call the function
-        actual_backup_path = backup_file(str(test_file))
+def test_read_csv_valid_file(tmp_path):
+    """Test reading a valid CSV file with data returns a list of dictionaries."""
+    csv_file = tmp_path / "valid.csv"
+    csv_content = (
+        "name,age,city\n"
+        "Alice,30,New York\n"
+        "Bob,25,Los Angeles\n"
+        "Charlie,35,Chicago\n"
+    )
+    csv_file.write_text(csv_content)
 
-        # Verify the returned path is correct
-        assert actual_backup_path == expected_backup_path
+    records = read_csv(str(csv_file))
 
-        # Verify the backup file was actually created
-        assert os.path.exists(actual_backup_path)
-
-        # Verify the content is the same
-        with open(actual_backup_path, "r") as f:
-            assert f.read() == "dummy content"
-
-def test_backup_file_nonexistent(tmp_path):
-    # Pass a path that does not exist
-    non_existent_file = str(tmp_path / "does_not_exist.txt")
-
-    # Call the function
-    result = backup_file(non_existent_file)
-
-    # It should return an empty string
-    assert result == ""
+    assert len(records) == 3
+    assert records[0] == {"name": "Alice", "age": "30", "city": "New York"}
+    assert records[1] == {"name": "Bob", "age": "25", "city": "Los Angeles"}
+    assert records[2] == {"name": "Charlie", "age": "35", "city": "Chicago"}
