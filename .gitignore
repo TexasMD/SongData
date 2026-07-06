@@ -17,3 +17,6 @@ data/exports/*
 # Ignore SQLite databases
 *.sqlite
 *.db
+
+# Ignore local server logs and scratch output
+tmp/
