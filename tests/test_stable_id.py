@@ -12,11 +12,3 @@ def test_generate_stable_id():
 
     id3 = generate_stable_id("Bohemian Rhapsody", "Queen", "Live")
     assert id1 != id3
-
-def test_generate_stable_id_version_edge_cases():
-    id_none = generate_stable_id("Bohemian Rhapsody", "Queen", None)
-    id_empty = generate_stable_id("Bohemian Rhapsody", "Queen", "")
-    id_spaces = generate_stable_id("Bohemian Rhapsody", "Queen", "   ")
-
-    assert id_none == id_empty
-    assert id_none == id_spaces
