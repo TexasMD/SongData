@@ -12,7 +12,7 @@ from src.stable_id import generate_stable_id
 from src.duplicates import find_duplicates, group_by_version
 from src.schema import validate_record
 from src.quality import generate_quality_report
-from src.sqlite_poc import insert_records
+from src.sqlite_poc import insert_records, insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
@@ -42,8 +42,14 @@ def build_v2(args):
     print(f"build-v2: dry-run={not args.write}")
     if args.write:
         print("Executing write operations for build-v2...")
-        # Example logic to trigger SQLite POC
-        # insert_records([])
+        print(f"Executing rebuild-db into {DB_PATH}...")
+        if os.path.exists(DB_PATH):
+            os.remove(DB_PATH)
+
+        ensure_mock_file()
+        records = read_csv(INPUT_MOCK_FILE)
+        insert_v2_records(records)
+        print(f"Successfully rebuilt database with {len(records)} records.")
 
 def rebuild(args):
     """
@@ -169,7 +175,7 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    parser_build = subparsers.add_parser("build-v2", help="Build the database")
+    parser_build = subparsers.add_parser("build-v2", help="Build the SQLite database")
 
     parser_rebuild = subparsers.add_parser("rebuild", help="Rebuild compatibility main CSV from recordings.csv")
 
