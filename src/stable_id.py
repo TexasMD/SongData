@@ -14,4 +14,4 @@ def generate_stable_id(title: str, artist: str, version: Optional[str] = None) -
         norm_version = normalize_text(version)
         components += f"|{norm_version}"
 
-    return hashlib.md5(components.encode('utf-8')).hexdigest()
+    return hashlib.sha256(components.encode('utf-8')).hexdigest()
