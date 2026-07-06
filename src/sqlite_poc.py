@@ -3,7 +3,7 @@ import os
 import contextlib
 from typing import List, Dict, Any
 
-DB_PATH = "data/staging/jules/MusicDB.sqlite"
+DB_PATH = "data/staging/jules/poc.db"
 
 def init_db(db_path: str = DB_PATH):
     os.makedirs(os.path.dirname(db_path), exist_ok=True)

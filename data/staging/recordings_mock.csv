@@ -1,5 +1,2 @@
 Recording ID,Song ID,Title,Artist,Version,Spotify Track ID,MusicBrainz ID,BPM,Key,Playlists,Arrangement,SHS Link
 rec1,song1,Test Song,Test Artist,,sp1,mb1,120,C,Test;Cool,Acoustic,http://shs.com/1
-rec2,song2,Similar Song,Test Artist,,sp2,mb2,122,C,Test;Other,Electric,http://shs.com/2
-rec3,song3,Different Song,Another Artist,,sp3,mb3,140,D,Other,,http://shs.com/3
-rec4,song1,Test Song,Test Artist,Live,sp4,mb4,121,C,Cool;Live,Acoustic,http://shs.com/4
