@@ -2,7 +2,9 @@ import os
 import csv
 import io
 from contextlib import redirect_stdout
-from scripts.musicdb import generate_quality_report, build_v2
+import argparse
+from unittest.mock import patch
+from scripts.musicdb import quality_report, build_v2
 
 def test_quality_report_dry_run(tmp_path):
     db_csv = tmp_path / "test_db.csv"
@@ -15,11 +17,13 @@ def test_quality_report_dry_run(tmp_path):
     # Test dry run
     f = io.StringIO()
     with redirect_stdout(f):
-        generate_quality_report(str(db_csv), write_enabled=False)
+        args = argparse.Namespace(write=False)
+        with patch("scripts.musicdb.INPUT_MOCK_FILE", str(db_csv)):
+            quality_report(args)
 
     output = f.getvalue()
-    assert "Quality Report Summary:" in output
-    assert "Total songs: 1" in output
+    assert "Report contents:" in output
+    assert "missing_spotify_mbid" in output
 
     # Verify no files were written to the default export dir (though we didn't specify it)
     export_dir = tmp_path / "exports"
@@ -37,10 +41,13 @@ def test_quality_report_write(tmp_path):
 
     f = io.StringIO()
     with redirect_stdout(f):
-        generate_quality_report(str(db_csv), write_enabled=True, export_dir=str(export_dir))
+        args = argparse.Namespace(write=True)
+        with patch("scripts.musicdb.INPUT_MOCK_FILE", str(db_csv)), \
+             patch("scripts.musicdb.os.path.dirname", return_value=str(export_dir)):
+            quality_report(args)
 
-    assert os.path.exists(str(export_dir / "quality_report.json"))
-    assert os.path.exists(str(export_dir / "quality_report.md"))
+    assert os.path.exists(str(export_dir / ".." / "data" / "exports" / "quality_report.json"))
+    assert os.path.exists(str(export_dir / ".." / "data" / "exports" / "quality_report.md"))
 
 def test_build_v2_harden(tmp_path):
     db_csv = tmp_path / "test_db.csv"
@@ -54,9 +61,16 @@ def test_build_v2_harden(tmp_path):
     with open(sqlite_path, "w") as f:
         f.write("dummy data")
 
-    build_v2(str(db_csv), write_enabled=True, sqlite_path=str(sqlite_path))
+    from src.sqlite_poc import insert_v2_records as real_insert
+    def mock_insert(recs):
+        real_insert(recs, db_path=str(sqlite_path))
 
-    # Verify it's a real SQLite DB now, not "dummy data"
+    args = argparse.Namespace(write=True)
+    with patch("scripts.musicdb.INPUT_MOCK_FILE", str(db_csv)), \
+         patch("scripts.musicdb.DB_PATH", str(sqlite_path)), \
+         patch("scripts.musicdb.insert_v2_records", new=mock_insert):
+        build_v2(args)
+
     assert os.path.exists(str(sqlite_path))
     with open(sqlite_path, "rb") as f:
         header = f.read(16)

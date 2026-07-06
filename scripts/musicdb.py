@@ -7,12 +7,9 @@ import csv
 # Add parent directory to path so we can import src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.normalization import normalize_text, normalize_artist
-from src.stable_id import generate_stable_id
-from src.duplicates import find_duplicates, group_by_version
 from src.schema import validate_record
 from src.quality import generate_quality_report
-from src.sqlite_poc import insert_records, insert_v2_records, DB_PATH
+from src.sqlite_poc import insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
@@ -175,19 +172,19 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    parser_build = subparsers.add_parser("build-v2", help="Build the SQLite database")
+    subparsers.add_parser("build-v2", help="Build the SQLite database")
 
-    parser_rebuild = subparsers.add_parser("rebuild", help="Rebuild compatibility main CSV from recordings.csv")
+    subparsers.add_parser("rebuild", help="Rebuild compatibility main CSV from recordings.csv")
 
-    parser_review = subparsers.add_parser("review-active-vs-staged", help="Review staged changes")
+    subparsers.add_parser("review-active-vs-staged", help="Review staged changes")
 
-    parser_quality = subparsers.add_parser("quality-report", help="Generate a quality report")
+    subparsers.add_parser("quality-report", help="Generate a quality report")
 
-    parser_import = subparsers.add_parser("import-playlist", help="Import a playlist")
+    subparsers.add_parser("import-playlist", help="Import a playlist")
 
-    parser_verify = subparsers.add_parser("verify", help="Verify data integrity")
+    subparsers.add_parser("verify", help="Verify data integrity")
 
-    parser_export = subparsers.add_parser("export-view", help="Export data view")
+    subparsers.add_parser("export-view", help="Export data view")
 
     args = parser.parse_args()
 
