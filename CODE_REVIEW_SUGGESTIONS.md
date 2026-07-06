@@ -23,6 +23,7 @@ Here are some suggested improvements to enhance robustness, scalability, and mai
 *   **Current State:** Uses direct SQL string construction and basic `sqlite3` execution. Connections are opened and closed per function call.
 *   **Improvement:** Implement a basic Context Manager (`with sqlite3.connect(...) as conn:`) to ensure connections are always closed safely even if errors occur. Parameterized queries `(?, ?, ?)` are currently used, which is excellent for SQL injection prevention.
 *   **Benefit:** Better resource management and prevents database locking issues.
+*   **Update:** A major performance bottleneck (N+1 inserts) has been resolved by implementing `executemany` for batch processing.
 
 ## 5. Duplicate Detection Logic (`src/duplicates.py`)
 *   **Current State:** Uses exact string matching via the `generate_stable_id` hash.
