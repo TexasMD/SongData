@@ -1,3 +1,22 @@
 __pycache__/
 *.pyc
+
+# Ignore backups
+*.bak
+
+# Ignore CSVs to prevent committing full databases
+*.csv
+!data/staging/recordings_mock.csv
+
+# Ignore exports
+data/exports/*
+!data/exports/.gitkeep
+!data/exports/jules/search_ui_mvp_summary.md
+.env
+
+# Ignore SQLite databases
 *.sqlite
+*.db
+
+# Ignore local server logs and scratch output
+tmp/

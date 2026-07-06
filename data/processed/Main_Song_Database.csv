@@ -1,6 +1,0 @@
-song_id,title,artist,album,spotify_id,musicbrainz_id,bpm,key,musician_performance,external_links
-song_001,Song One,Artist A,Album X,spotify:track:123,mbid:123,120,Cmaj,Guitar: Artist A,https://example.com/1
-song_002,Song Two,Artist B,Album Y,,,,,,
-song_003,Song Three,Artist A,Album X,spotify:track:456,,110,Am,,
-song_004,Song One,Artist A,Album X,spotify:track:123,mbid:123,120,Cmaj,Guitar: Artist A,https://example.com/1
-song_005,Song Five,Artist C,Album Z,spotify:track:789,mbid:789,90,Gmaj,Drums: Artist C,https://unverified.com/5
