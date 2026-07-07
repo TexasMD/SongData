@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-07-05T07:20:08.483560+00:00",
+  "mode": "write",
+  "active_database_modified": true,
+  "active_csv": "D:\\Music\\MusicDB\\data\\processed\\Main_Song_Database.csv",
+  "decisions_csv": "D:\\Music\\MusicDB\\data\\staging\\codex\\manual_review_decisions.csv",
+  "actions_csv": "D:\\Music\\MusicDB\\data\\exports\\codex\\manual_review_application_actions.csv",
+  "backup_path": "D:\\Music\\MusicDB\\data\\backups\\manual_review_application\\20260705_022008\\Main_Song_Database.csv",
+  "active_sha_before": "0167423eca49583aef7749716087a0ed43bf919154f39b00b56bc1d499549d2c",
+  "active_sha_after": "12daaafd33d4a153871181573b71acb9156c827b5b79f749b406935d5c8db7d4",
+  "decision_counts": {
+    "keep_active": 184,
+    "use_staged": 34
+  },
+  "action_counts": {
+    "update_field": 34
+  },
+  "field_action_counts": {
+    "Album": 1,
+    "Genre": 7,
+    "Spotify Track ID": 26
+  },
+  "action_count": 34,
+  "active_rows_after": 9672
+}

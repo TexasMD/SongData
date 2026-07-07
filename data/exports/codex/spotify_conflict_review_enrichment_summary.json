@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-07-05T01:08:30.247781",
+  "review_csv": "D:\\Music\\MusicDB\\data\\exports\\codex\\active_main_patch_skipped_review.csv",
+  "backup_path": "D:\\Music\\MusicDB\\data\\backups\\codex_review_enrichment\\20260705_010830\\active_main_patch_skipped_review.csv",
+  "cache_csv": "D:\\Music\\MusicDB\\data\\exports\\codex\\spotify_conflict_track_metadata_cache.csv",
+  "conflict_rows": 82,
+  "enriched_conflict_rows": 82,
+  "unique_track_ids": 149,
+  "metadata_rows": 149,
+  "missing_track_ids": [],
+  "added_columns": [
+    "Active Spotify Title",
+    "Active Spotify Artist",
+    "Active Spotify Album",
+    "Candidate Spotify Title",
+    "Candidate Spotify Artist",
+    "Candidate Spotify Album",
+    "Staged Spotify Title",
+    "Staged Spotify Artist",
+    "Staged Spotify Album"
+  ]
+}

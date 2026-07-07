@@ -1,0 +1,95 @@
+{
+  "handoff_dir": "data\\staging\\codex\\antigravity_handoff\\20260705_181505",
+  "files": {
+    "mood_event_tag_suggestions.csv": {
+      "path": "data\\staging\\codex\\antigravity_handoff\\20260705_181505\\mood_event_tag_suggestions.csv",
+      "sha256": "48481695653d569fcfa38ae7b19944a4003eb1122ae3efe77c76ea1064811dda",
+      "rows": 8906,
+      "headers": [
+        "Recording ID",
+        "Suggested Mood Tags",
+        "Suggested Event Tags",
+        "Suggested Situation Tags",
+        "Source URL",
+        "Confidence",
+        "Notes"
+      ],
+      "confidence_counts": {
+        "Medium": 1324,
+        "Low": 7582
+      },
+      "recording_ids": 8906,
+      "Suggested Mood Tags_nonblank": 5,
+      "Suggested Event Tags_nonblank": 0,
+      "Suggested Situation Tags_nonblank": 10
+    },
+    "performance_metadata_suggestions.csv": {
+      "path": "data\\staging\\codex\\antigravity_handoff\\20260705_181505\\performance_metadata_suggestions.csv",
+      "sha256": "1637a1d4b679ea3d20f2be6787335d3963c2c8f077b269780cf4008bbaabd519",
+      "rows": 8906,
+      "headers": [
+        "Recording ID",
+        "BPM",
+        "Key",
+        "Tuning",
+        "Capo",
+        "Guitar Difficulty",
+        "Bass Difficulty",
+        "Drum Difficulty",
+        "Vocal Range",
+        "Instrumentation",
+        "Arrangement Notes",
+        "Source URL",
+        "Confidence",
+        "Notes"
+      ],
+      "confidence_counts": {
+        "Low": 8906
+      },
+      "recording_ids": 8906,
+      "BPM_nonblank": 843,
+      "Key_nonblank": 844,
+      "Tuning_nonblank": 8906,
+      "Capo_nonblank": 8906,
+      "Guitar Difficulty_nonblank": 8906,
+      "Bass Difficulty_nonblank": 8906,
+      "Drum Difficulty_nonblank": 8906,
+      "Instrumentation_nonblank": 8906
+    },
+    "external_link_verification.csv": {
+      "path": "data\\staging\\codex\\antigravity_handoff\\20260705_181505\\external_link_verification.csv",
+      "sha256": "f444da23c9ea8a8963c13097d86db1962181d7a5c3210ffb0501ec8c32a22707",
+      "rows": 26718,
+      "headers": [
+        "Recording ID",
+        "Site",
+        "Verified URL",
+        "Search URL",
+        "Match Type",
+        "Confidence",
+        "Notes"
+      ],
+      "confidence_counts": {
+        "Low": 26718
+      },
+      "recording_ids": 8906,
+      "site_counts": {
+        "Ultimate Guitar": 8906,
+        "SecondHandSongs": 8906,
+        "WhoSampled": 8906
+      },
+      "match_type_counts": {
+        "Search Query": 26718
+      },
+      "verified_url_nonblank": 0,
+      "search_url_nonblank": 26718
+    }
+  },
+  "status": {
+    "timestamp": 1783293321.8185308,
+    "processed": 8900,
+    "total": 9672,
+    "percent": 92.02,
+    "last_processed": "Yazoo - Only You"
+  }
+}

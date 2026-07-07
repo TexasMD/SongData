@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-07-05T06:30:21.648929+00:00",
+  "input_csv": "D:\\Music\\MusicDB\\data\\exports\\codex\\active_main_patch_skipped_review.csv",
+  "decisions_csv": "D:\\Music\\MusicDB\\data\\staging\\codex\\manual_review_decisions.csv",
+  "rows": 218,
+  "decision_counts": {
+    "keep_active": 11,
+    "needs_review": 186,
+    "use_staged": 21
+  },
+  "spotify_conflict_rows": 82,
+  "preference_rules": [
+    "Prefer remastered tracks.",
+    "Prefer studio versions over live/unplugged/concert/session versions.",
+    "Prefer standard versions over extended play, EP, 7-inch, single-version, and radio-edit variants."
+  ]
+}

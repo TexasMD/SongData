@@ -1,6 +1,6 @@
 # Codex Issue #3 Patch Candidate
 
-Generated: 2026-07-05T04:13:36.202048+00:00
+Generated: 2026-07-05T20:17:56.868691+00:00
 
 ## Inputs
 
@@ -20,8 +20,8 @@ Generated: 2026-07-05T04:13:36.202048+00:00
 ## Safety
 
 - Active DB modified: `False`
-- Active SHA before: `91c026c9a99f38a11de04a09a754b80f333b93ff4eb600a7d2076fd22694592e`
-- Active SHA after: `91c026c9a99f38a11de04a09a754b80f333b93ff4eb600a7d2076fd22694592e`
+- Active SHA before: `6cc0b90fd1d1948897753f4cb3e7f79c668066b7c95f6d5c8831f10fbb1622c2`
+- Active SHA after: `6cc0b90fd1d1948897753f4cb3e7f79c668066b7c95f6d5c8831f10fbb1622c2`
 - Overwrite violations: 0
 - Staged-only Spotify Track IDs represented in candidate: 1,322 / 1,322
 - Staged-only Spotify Track ID mismatches: 0
@@ -66,4 +66,4 @@ Generated: 2026-07-05T04:13:36.202048+00:00
 
 ## Recommendation
 
-Review the patch actions and skipped-review CSVs before any promotion. If accepted, run `python scripts\promote_active_main_patch_candidate.py` first as a dry run. A real promotion requires `python scripts\promote_active_main_patch_candidate.py --write`, which validates reviewed hashes and row counts, creates a timestamped backup, then replaces `data/processed/Main_Song_Database.csv` with the reviewed candidate.
+Review the patch actions and skipped-review CSVs before any promotion. If accepted, promote with a separate script that first creates a timestamped backup of `data/processed/Main_Song_Database.csv`.

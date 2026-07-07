@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pro Console Song Database - Ultra Dense Grid</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#f95306",
+          "background-light": "#f8f6f5",
+          "background-dark": "#23150f",
+          "console-primary": "#FF5000",
+          "console-bg": "#09090A",
+          "console-surface": "#141416",
+          "console-surface-hover": "#1C1C1F",
+          "console-text": "#EAEAEA",
+          "console-muted": "#737378",
+          "console-accent": "#00E5FF",
+          "console-border": "#2A2A2E",
+          "grid-border": "#3a2d27",
+        },
+        fontFamily: {
+          "display": ["Space Grotesk", "sans-serif"],
+          "mono": ["JetBrains Mono", "monospace"]
+        },
+        borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "0px"},
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #09090A;
+    color: #EAEAEA;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
+  .resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    background: #3a2d27;
+    cursor: col-resize;
+    transition: background 0.2s;
+  }
+  .resizer:hover {
+    background: #f95306;
+  }
+  .data-cell {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  tr:hover {
+    background-color: #1C1C1F !important;
+  }
+  .tag-badge {
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 4px;
+    background: #3a2d27;
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body class="bg-console-bg text-console-text font-mono antialiased overflow-hidden selection:bg-console-primary selection:text-console-bg">
+<div class="relative flex h-screen w-full flex-col bg-[#09090A] overflow-hidden">
+<!-- COMPACT HEADER -->
+<header class="flex items-center justify-between border-b border-grid-border px-4 py-2 bg-[#141416]">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3 text-white">
+<div class="size-3 text-console-primary">
+<svg fill="currentColor" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M24 4C25.7818 14.2173 33.7827 22.2182 44 24C33.7827 25.7818 25.7818 33.7827 24 44C22.2182 33.7827 14.2173 25.7818 4 24C14.2173 22.2182 22.2182 14.2173 24 4Z"></path>
+</svg>
+</div>
+<h1 class="text-white text-sm font-bold tracking-tight font-display">PRO CONSOLE</h1>
+</div>
+<div class="flex items-center bg-[#271f1b] border border-grid-border rounded px-2 h-7">
+<span class="material-symbols-outlined text-console-muted" style="font-size: 16px;">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-[11px] text-white w-48 h-full placeholder:text-[#737378]" placeholder="FILTER DATABASE..."/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center size-7 rounded bg-[#271f1b] text-white hover:bg-console-primary hover:text-black transition-colors">
+<span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+</button>
+<button class="flex items-center justify-center size-7 rounded bg-[#271f1b] text-white hover:bg-console-primary hover:text-black transition-colors">
+<span class="material-symbols-outlined" style="font-size: 16px;">settings</span>
+</button>
+</div>
+</header>
+<!-- DATA GRID CONTAINER -->
+<main class="flex-1 overflow-auto bg-[#09090A]">
+<table class="w-full border-collapse table-fixed min-w-[1400px]">
+<thead class="sticky top-0 z-10">
+<tr class="bg-[#1C1C1F] border-b border-grid-border shadow-sm">
+<th class="w-10 px-2 py-1.5 text-left border-r border-grid-border">
+<input class="size-3.5 bg-transparent border-grid-border rounded-sm focus:ring-0 checked:bg-console-primary" type="checkbox"/>
+</th>
+<!-- Header Columns with Resizers -->
+<th class="relative w-[200px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Title <div class="resizer"></div></th>
+<th class="relative w-[150px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Artist <div class="resizer"></div></th>
+<th class="relative w-[50px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">BPM <div class="resizer"></div></th>
+<th class="relative w-[70px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Key <div class="resizer"></div></th>
+<th class="relative w-[80px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Genre <div class="resizer"></div></th>
+<th class="relative w-[60px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Energy <div class="resizer"></div></th>
+<th class="relative w-[120px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Tags <div class="resizer"></div></th>
+<th class="relative w-[60px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Length <div class="resizer"></div></th>
+<th class="relative w-[50px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Year <div class="resizer"></div></th>
+<th class="relative w-[120px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Label <div class="resizer"></div></th>
+<th class="relative w-[140px] px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">ISRC <div class="resizer"></div></th>
+<th class="relative w-auto px-2 py-1.5 text-left text-[11px] font-semibold text-console-muted uppercase tracking-wider border-r border-grid-border">Path <div class="resizer"></div></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-grid-border/50">
+<!-- Row Helper Function Simulation - Repeated rows for density -->
+<tr class="bg-transparent">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Summer Hits</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Pop Artist</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">120</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">C Major</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Pop</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-yellow-500">85%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Summer</span><span class="tag-badge">Upbeat</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">3:30</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2023</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Sony Music</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">US-S12-23-00102</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/lib/2023/pop/sh.wav</td>
+</tr>
+<tr class="bg-[#141416]/40">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Sunset Vibes</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Chill Producer</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">125</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">G Minor</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">House</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-green-500">62%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Deep</span><span class="tag-badge">Melodic</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">4:15</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2023</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Ultra Records</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">GB-B03-23-44123</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/lib/2023/house/sv_master.wav</td>
+</tr>
+<!-- Repeating rows for density -->
+<tr class="bg-transparent">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Neon District</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Cyber Synth</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">100</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">E Minor</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Synthwave</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-red-500">92%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">80s</span><span class="tag-badge">Retro</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">5:02</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2022</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">NewRetroWave</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">FR-A01-22-11002</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/lib/22/sw/neon_dist.wav</td>
+</tr>
+<!-- Duplicate rows to show density -->
+<tr class="bg-[#141416]/40">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Acid Rain (Original Mix)</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">TB-303 Fanatic</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">132</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">Ab Major</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Acid Techno</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-red-600">98%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Analog</span><span class="tag-badge">Distorted</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">7:12</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2024</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Drumcode</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">SE-D44-24-00445</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/techno/ar_raw.wav</td>
+</tr>
+<!-- Row 5 -->
+<tr class="bg-transparent">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Lo-Fi Morning</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Sleepy Beats</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">82</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">F Major</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Lo-Fi Hip Hop</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-blue-400">15%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Chill</span><span class="tag-badge">Lo-fi</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">2:45</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2021</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">ChilledCow</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">CA-X11-21-99201</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/lib/lofi/morn.mp3</td>
+</tr>
+<!-- Row 6 -->
+<tr class="bg-[#141416]/40">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Glitch in the Matrix</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Null Pointer</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">174</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">D Minor</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">DnB</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-red-500">96%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Dark</span><span class="tag-badge">Neuro</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">6:05</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2023</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">RAM Records</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">UK-V02-23-88112</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/dnb/glitch_final.wav</td>
+</tr>
+<!-- Row 7 -->
+<tr class="bg-transparent">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Emerald Garden</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Nature Sounds</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">0</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">N/A</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Ambient</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-blue-600">5%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Field</span><span class="tag-badge">ASMR</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">15:00</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2020</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Earth Audio</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">DE-N09-20-44001</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/fx/garden_loop.wav</td>
+</tr>
+<!-- Row 8 -->
+<tr class="bg-[#141416]/40">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Urban Legend</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Street Poet</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">92</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">B Minor</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Boom Bap</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-yellow-600">74%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Hip Hop</span><span class="tag-badge">90s</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">3:42</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">1994</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Underground Kings</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">US-BM9-94-00221</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/classics/ul_94.wav</td>
+</tr>
+<!-- Row 9 -->
+<tr class="bg-transparent">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Disco Inferno (Edit)</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">Mirrorball</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">124</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">G Major</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Disco</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-yellow-400">81%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Dance</span><span class="tag-badge">Classic</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">3:15</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2018</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Atlantic</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">FR-X12-18-00998</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/disco/inferno_edit.wav</td>
+</tr>
+<!-- Row 10 -->
+<tr class="bg-[#141416]/40">
+<td class="px-2 py-1 border-r border-grid-border/30 text-center"><input class="size-3 bg-transparent border-grid-border rounded-sm" type="checkbox"/></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-white font-medium">Quantum Leap</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">The Scientist</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-primary">140</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-accent">C# Minor</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">Dubstep</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-red-700">100%</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell flex gap-1"><span class="tag-badge">Heavy</span><span class="tag-badge">Bass</span></td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-console-muted">4:44</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">2024</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell">OWSLA</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell opacity-50">US-O01-24-11004</td>
+<td class="px-2 py-1 border-r border-grid-border/30 data-cell text-[9px] opacity-30">/audio/heavy/quantum.wav</td>
+</tr>
+</tbody>
+</table>
+</main>
+<!-- COMPACT PAGINATION / STATUS -->
+<footer class="flex items-center justify-between px-4 py-1.5 bg-[#141416] border-t border-grid-border text-[10px] font-mono uppercase tracking-tight">
+<div class="flex gap-4">
+<span class="text-console-muted">TOTAL ITEMS: <span class="text-white font-bold">14,203</span></span>
+<span class="text-console-muted">FILTERED: <span class="text-white font-bold">10</span></span>
+</div>
+<div class="flex items-center gap-1">
+<button class="size-6 flex items-center justify-center text-console-muted hover:text-white"><span class="material-symbols-outlined" style="font-size: 14px;">first_page</span></button>
+<button class="size-6 flex items-center justify-center text-console-muted hover:text-white"><span class="material-symbols-outlined" style="font-size: 14px;">chevron_left</span></button>
+<div class="flex items-center gap-1 px-2">
+<span class="text-console-primary font-bold">1</span>
+<span class="text-console-muted">/</span>
+<span class="text-white">1,421</span>
+</div>
+<button class="size-6 flex items-center justify-center text-console-muted hover:text-white"><span class="material-symbols-outlined" style="font-size: 14px;">chevron_right</span></button>
+<button class="size-6 flex items-center justify-center text-console-muted hover:text-white"><span class="material-symbols-outlined" style="font-size: 14px;">last_page</span></button>
+</div>
+<div class="text-console-muted">
+      FS: <span class="text-console-accent">1.2 TB FREE</span>
+</div>
+</footer>
+<!-- DYNAMIC FLOATING ACTION TOOLBAR (COMPACT) -->
+<div class="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#141416]/95 border border-console-primary/30 px-3 py-1.5 shadow-[0_0_15px_rgba(255,80,0,0.1)] z-50 rounded">
+<span class="text-[10px] font-mono text-console-primary font-bold uppercase tracking-widest px-1">2 SELECTED</span>
+<div class="h-4 w-[1px] bg-grid-border"></div>
+<button class="h-6 px-3 bg-console-primary text-black font-display font-bold text-[10px] uppercase hover:brightness-110 flex items-center gap-1.5 transition-all">
+<span class="material-symbols-outlined" style="font-size: 14px;">playlist_add</span>
+      ADD TO LIST
+    </button>
+<button class="h-6 px-3 bg-transparent text-white font-display font-bold text-[10px] border border-grid-border uppercase hover:bg-grid-border flex items-center gap-1.5 transition-all">
+<span class="material-symbols-outlined" style="font-size: 14px;">tune</span>
+      SIMILAR
+    </button>
+<button class="h-6 px-3 bg-transparent text-red-500 font-display font-bold text-[10px] border border-red-900/30 uppercase hover:bg-red-900/20 flex items-center gap-1.5 transition-all">
+<span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+      DELETE
+    </button>
+</div>
+</div>
+</body></html>

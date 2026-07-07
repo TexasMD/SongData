@@ -1,0 +1,90 @@
+{
+  "source_dir": "data\\staging\\antigravity",
+  "files": {
+    "mood_event_tag_suggestions.csv": {
+      "path": "data\\staging\\antigravity\\mood_event_tag_suggestions.csv",
+      "sha256": "f3bbd7f10bcf511cf4316b65bffee5c9425097c6970e86b449d135fe62700f07",
+      "rows": 9672,
+      "headers": [
+        "Recording ID",
+        "Suggested Mood Tags",
+        "Suggested Event Tags",
+        "Suggested Situation Tags",
+        "Source URL",
+        "Confidence",
+        "Notes"
+      ],
+      "recording_ids": 9672,
+      "confidence_counts": {
+        "Medium": 1443,
+        "Low": 8229
+      },
+      "Suggested Mood Tags_nonblank": 5,
+      "Suggested Event Tags_nonblank": 0,
+      "Suggested Situation Tags_nonblank": 10
+    },
+    "performance_metadata_suggestions.csv": {
+      "path": "data\\staging\\antigravity\\performance_metadata_suggestions.csv",
+      "sha256": "4c267c7ff9fb62202363d328c4747d155f64e8526e0aa5e42e774af7d74cb08c",
+      "rows": 9672,
+      "headers": [
+        "Recording ID",
+        "BPM",
+        "Key",
+        "Tuning",
+        "Capo",
+        "Guitar Difficulty",
+        "Bass Difficulty",
+        "Drum Difficulty",
+        "Vocal Range",
+        "Instrumentation",
+        "Arrangement Notes",
+        "Source URL",
+        "Confidence",
+        "Notes"
+      ],
+      "recording_ids": 9672,
+      "confidence_counts": {
+        "Low": 9672
+      },
+      "BPM_nonblank": 1018,
+      "Key_nonblank": 1019,
+      "Tuning_nonblank": 9672,
+      "Capo_nonblank": 9672,
+      "Guitar Difficulty_nonblank": 9672,
+      "Bass Difficulty_nonblank": 9672,
+      "Drum Difficulty_nonblank": 9672,
+      "Vocal Range_nonblank": 0,
+      "Instrumentation_nonblank": 9672,
+      "generative_source_rows": 9672
+    },
+    "external_link_verification.csv": {
+      "path": "data\\staging\\antigravity\\external_link_verification.csv",
+      "sha256": "d4de9f4b4049e5029d09210e4c8a88f9a50d541ff3240cfd016fc9b1ee514a45",
+      "rows": 29016,
+      "headers": [
+        "Recording ID",
+        "Site",
+        "Verified URL",
+        "Search URL",
+        "Match Type",
+        "Confidence",
+        "Notes"
+      ],
+      "recording_ids": 9672,
+      "confidence_counts": {
+        "Low": 29016
+      },
+      "site_counts": {
+        "Ultimate Guitar": 9672,
+        "SecondHandSongs": 9672,
+        "WhoSampled": 9672
+      },
+      "match_type_counts": {
+        "Search Query": 29016
+      },
+      "verified_url_nonblank": 0,
+      "search_url_nonblank": 29016
+    }
+  }
+}
