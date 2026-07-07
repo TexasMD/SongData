@@ -1,0 +1,49 @@
+name: Auto Update PRs
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  update-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update pending PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE_BRANCH=${GITHUB_REF#refs/heads/}
+          PRS=$(gh pr list --base $BASE_BRANCH --state open --json number -q '.[].number')
+          
+          if [ -z "$PRS" ]; then
+            echo "No open PRs targeting $BASE_BRANCH found."
+            exit 0
+          fi
+          
+          for pr in $PRS; do
+            echo "Attempting to update PR #$pr..."
+            if ! gh pr update $pr; then
+              echo "Failed to update PR #$pr. Initiating Agent Handoff to Jules..."
+              cat << 'EOF' > handoff_msg.md
+## Agent Handoff
+
+From: GitHub Actions Auto-Updater
+To: Jules
+Related workstream: Merge Conflict Resolution
+Related branch or artifact: PR
+
+### Request
+A merge conflict was detected while attempting to auto-update this PR with the latest base branch. Please pull this branch, resolve the conflict, and push the resolution.
+
+### Context
+This was automatically triggered by the CI/CD pipeline because the base branch was updated.
+EOF
+              gh pr comment $pr --body-file handoff_msg.md
+              rm handoff_msg.md
+            fi
+          done

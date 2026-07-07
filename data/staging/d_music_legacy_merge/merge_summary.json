@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-07-04T18:42:51.820019+00:00",
+  "canonical_main": "C:\\codex_work\\projects\\SongDB\\data\\processed\\Main_Song_Database.csv",
+  "legacy_main": "D:\\Music\\Main_Song_Database\\data\\processed\\Main_Song_Database.csv",
+  "canonical_rows": 9642,
+  "legacy_rows": 9369,
+  "candidate_rows": 9648,
+  "updated_canonical_rows": 7041,
+  "appended_legacy_rows": 6,
+  "ambiguous_key_groups_skipped": 1076,
+  "field_updates": {
+    "Album": 247,
+    "Discogs Verified": 185,
+    "Duration": 265,
+    "Genre": 45,
+    "Legacy D Music Source Files": 7041,
+    "Legacy D Music Spotify ID": 1863,
+    "Legacy D Music Verification Notes": 6302,
+    "MusicBrainz Verified": 45,
+    "Spotify Track ID": 1322,
+    "Spotify Verified": 2631,
+    "Year": 250,
+    "iTunes Verified": 324
+  },
+  "candidate_csv": "C:\\codex_work\\projects\\SongDB\\data\\staging\\d_music_legacy_merge\\merged_candidate_Main_Song_Database.csv",
+  "appended_rows_csv": "C:\\codex_work\\projects\\SongDB\\data\\staging\\d_music_legacy_merge\\d_music_only_appended_rows.csv",
+  "ambiguous_matches_csv": "C:\\codex_work\\projects\\SongDB\\data\\staging\\d_music_legacy_merge\\ambiguous_matches.csv",
+  "archived_legacy_inputs": [
+    "C:\\codex_work\\projects\\SongDB\\data\\raw\\d_music_legacy\\data\\processed\\Main_Song_Database.csv",
+    "C:\\codex_work\\projects\\SongDB\\data\\raw\\d_music_legacy\\docs\\musical_dna_analysis.md",
+    "C:\\codex_work\\projects\\SongDB\\data\\raw\\d_music_legacy\\data\\raw\\book1_cleaned.csv",
+    "C:\\codex_work\\projects\\SongDB\\data\\raw\\d_music_legacy\\data\\raw\\book1_cleaned2.csv",
+    "C:\\codex_work\\projects\\SongDB\\data\\raw\\d_music_legacy\\data\\raw\\book1_cleaned3.csv"
+  ],
+  "legacy_scripts_policy": "D: scripts were not copied into active scripts because one contains hardcoded credentials and brittle absolute paths.",
+  "main_database_modified": false
+}

@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-07-05T05:08:02.098064+00:00",
+  "mode": "dry_run",
+  "active_database_modified": false,
+  "backup_path": "",
+  "active_csv": "D:\\Music\\MusicDB\\data\\processed\\Main_Song_Database.csv",
+  "candidate_csv": "D:\\Music\\MusicDB\\data\\staging\\codex\\active_main_patch_candidate.csv",
+  "active_sha256": "91c026c9a99f38a11de04a09a754b80f333b93ff4eb600a7d2076fd22694592e",
+  "candidate_sha256": "9f3b8209c35ce64ebb145c0caf27b3ea8c5940e4e06e5e319754dd2d97e5ce33",
+  "active_rows": 9672,
+  "candidate_rows": 9672,
+  "active_columns": 58,
+  "candidate_columns": 61,
+  "added_columns": [
+    "Legacy D Music Spotify ID",
+    "Legacy D Music Verification Notes",
+    "Legacy D Music Source Files"
+  ],
+  "patch_action_count": 21791,
+  "manual_review_count": 218
+}

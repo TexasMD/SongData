@@ -1,0 +1,12 @@
+﻿Field,Difference Type,Count
+Album,conflict_both_nonblank,4
+BPM,staged_only_value,855
+Duration,conflict_both_nonblank,7
+Energy,staged_only_value,856
+Genre,conflict_both_nonblank,22
+Genre,staged_only_value,75
+MusicBrainz Verified,staged_only_value,1810
+Spotify Track ID,staged_only_value,1322
+Spotify Verified,conflict_both_nonblank,1
+Spotify Verified,staged_only_value,481
+Vibe,staged_only_value,856
