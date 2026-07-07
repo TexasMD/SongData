@@ -1,5 +1,4 @@
 from typing import List, Dict, Any
-import math
 
 def calculate_similarity(target_song: Dict[str, Any], candidate_songs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """

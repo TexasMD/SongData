@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-07-04T21:55:27.336223+00:00",
+  "active_csv": "D:\\Music\\MusicDB\\data\\processed\\Main_Song_Database.csv",
+  "staged_csv": "D:\\Music\\MusicDB\\data\\staging\\d_music_legacy_merge\\merged_candidate_Main_Song_Database.csv",
+  "active_sha256": "91c026c9a99f38a11de04a09a754b80f333b93ff4eb600a7d2076fd22694592e",
+  "staged_sha256": "b4b99aaf3210c1bd70de2e0807443012c7ee43b6d02a87a5670f47d0428e2911",
+  "active_rows": 9672,
+  "staged_rows": 9648,
+  "active_columns": 58,
+  "staged_columns": 60,
+  "active_only_columns": [
+    "Spotify ID"
+  ],
+  "staged_only_columns": [
+    "Legacy D Music Spotify ID",
+    "Legacy D Music Verification Notes",
+    "Legacy D Music Source Files"
+  ],
+  "row_count_delta_active_minus_staged": 24,
+  "active_only_row_signatures": 63,
+  "staged_only_row_signatures": 39,
+  "signature_count_difference_groups": 99,
+  "unique_song_keys_active": 8341,
+  "unique_song_keys_staged": 8341,
+  "unambiguous_song_keys_compared": 7251,
+  "song_keys_only_in_active": 0,
+  "song_keys_only_in_staged": 0,
+  "active_duplicate_song_key_groups": 1087,
+  "staged_duplicate_song_key_groups": 1067,
+  "duplicate_song_key_groups_total": 1090,
+  "field_differences_unambiguous": 6289,
+  "spotify_status_counts_active": {
+    "already_same": 544,
+    "conflict_spotify_id_differs_from_track_id": 82,
+    "no_legacy_spotify_id": 7388,
+    "safe_to_copy_spotify_id_to_spotify_track_id": 1658
+  },
+  "spotify_id_conflicts_between_active_and_staged": 0,
+  "outputs": {
+    "active_only_rows": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\active_only_rows.csv",
+    "staged_only_rows": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\staged_only_rows.csv",
+    "signature_count_differences": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\signature_count_differences.csv",
+    "field_differences": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\field_differences_unambiguous_song_keys.csv",
+    "field_difference_summary": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\field_difference_summary.csv",
+    "spotify_normalization": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\spotify_id_normalization_review.csv",
+    "spotify_conflicts": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\spotify_id_conflicts_between_active_and_staged.csv",
+    "duplicate_song_key_groups": "D:\\Music\\MusicDB\\data\\exports\\active_vs_staged_review\\duplicate_song_key_groups.csv",
+    "markdown_report": "D:\\Music\\MusicDB\\docs\\active_vs_staged_review_report.md"
+  }
+}

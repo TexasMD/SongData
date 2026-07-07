@@ -1,4 +1,3 @@
-import pytest
 from src.similarity import calculate_similarity
 
 def test_calculate_similarity_bpm():
