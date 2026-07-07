@@ -10,7 +10,7 @@ Based on `CODE_REVIEW_SUGGESTIONS.md` and current project rules (especially memo
 ## Priority 2: Refactor Testing (Suggestion 6)
 *   **Relevance:** High. Current tests rely heavily on slow `subprocess` calls.
 *   **Action:** Refactor `tests/test_cli.py` to import and call CLI functions directly using mock `argparse.Namespace` or keyword arguments.
-*   **Status:** Pending.
+*   **Status:** Done.
 
 ## Priority 3: Path/Environment Management (Suggestion 1)
 *   **Relevance:** Medium-High. Hardcoded paths make local testing vs production tricky.
