@@ -7,9 +7,6 @@ import csv
 # Add parent directory to path so we can import src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.normalization import normalize_text, normalize_artist
-from src.stable_id import generate_stable_id
-from src.duplicates import find_duplicates, group_by_version
 from src.schema import validate_record
 from src.quality import generate_quality_report as src_generate_quality_report
 from src.sqlite_poc import insert_records, insert_v2_records, DB_PATH
@@ -253,6 +250,7 @@ def main():
         verify()
     elif args.command == "export-view":
         export_view(write_enabled=args.write)
+
 
 
 if __name__ == "__main__":
