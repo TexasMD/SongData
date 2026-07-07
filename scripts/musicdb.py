@@ -8,8 +8,8 @@ import csv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.schema import validate_record
-from src.quality import generate_quality_report
-from src.sqlite_poc import insert_v2_records, DB_PATH
+from src.quality import generate_quality_report as src_generate_quality_report
+from src.sqlite_poc import insert_records, insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
@@ -55,32 +55,32 @@ def ensure_mock_file():
             )
 
 
-def build_v2(args):
-    print(f"build-v2: dry-run={not args.write}")
-    if args.write:
+def build_v2(input_csv=INPUT_MOCK_FILE, write_enabled=False, sqlite_path=DB_PATH):
+    print(f"build-v2: dry-run={not write_enabled}")
+    if write_enabled:
         print("Executing write operations for build-v2...")
-        print(f"Executing rebuild-db into {DB_PATH}...")
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
+        print(f"Executing rebuild-db into {sqlite_path}...")
+        if os.path.exists(sqlite_path):
+            os.remove(sqlite_path)
 
-        ensure_mock_file()
-        records = read_csv(INPUT_MOCK_FILE)
-        insert_v2_records(records)
+        ensure_mock_file()  # Usually we should use input_csv, but to keep the mock for now
+        records = read_csv(input_csv)
+        insert_v2_records(records, db_path=sqlite_path)
         print(f"Successfully rebuilt database with {len(records)} records.")
 
 
-def rebuild(args):
+def rebuild(write_enabled=False):
     """
     Rebuilds the compatibility Main_Song_Database.csv from recordings.csv.
     """
-    print(f"rebuild: dry-run={not args.write}")
+    print(f"rebuild: dry-run={not write_enabled}")
 
     ensure_mock_file()
     input_file = INPUT_MOCK_FILE
     output_dir = "data/staging/jules"
     output_file = os.path.join(output_dir, "Main_Song_Database.csv")
 
-    if args.write:
+    if write_enabled:
         print(f"Rebuilding {output_file} from {input_file}...")
         os.makedirs(output_dir, exist_ok=True)
 
@@ -122,19 +122,24 @@ def rebuild(args):
             print(f"DRY RUN: Would create backup of {output_file}")
 
 
-def review_active_vs_staged(args):
+def review_active_vs_staged():
     print("review-active-vs-staged...")
 
 
-def quality_report(args):
-    print(f"quality-report: dry-run={not args.write}")
+def generate_quality_report(
+    input_csv=INPUT_MOCK_FILE, write_enabled=False, export_dir=None
+):
+    print(f"quality-report: dry-run={not write_enabled}")
 
     ensure_mock_file()
-    records = read_csv(INPUT_MOCK_FILE)
-    report = generate_quality_report(records)
+    records = read_csv(input_csv)
+    report = src_generate_quality_report(records)
 
-    if args.write:
-        export_dir = os.path.join(os.path.dirname(__file__), "..", "data", "exports")
+    if write_enabled:
+        if export_dir is None:
+            export_dir = os.path.join(
+                os.path.dirname(__file__), "..", "data", "exports"
+            )
         os.makedirs(export_dir, exist_ok=True)
 
         json_file = os.path.join(export_dir, "quality_report.json")
@@ -150,16 +155,18 @@ def quality_report(args):
                 f.write(f"- **{k}**: {v}\n")
         print(f"Exported Markdown report to {md_file}")
     else:
+        print("Quality Report Summary:")
+        print(f"Total songs: {len(records)}")
         print("DRY RUN: Would export JSON and Markdown reports to data/exports")
         print("Report contents:")
         print(json.dumps(report, indent=2))
 
 
-def import_playlist(args):
-    print(f"import-playlist: dry-run={not args.write}")
+def import_playlist(write_enabled=False):
+    print(f"import-playlist: dry-run={not write_enabled}")
 
 
-def verify(args):
+def verify():
     print("verify...")
     ensure_mock_file()
     records = read_csv(INPUT_MOCK_FILE)
@@ -178,7 +185,7 @@ def verify(args):
         print(f"Validation successful for {len(records)} records.")
 
 
-def export_view(args):
+def export_view(write_enabled=False):
     print("export-view...")
     export_dir = os.path.join(
         os.path.dirname(__file__), "..", "data", "exports", "jules"
@@ -189,7 +196,7 @@ def export_view(args):
     ensure_mock_file()
     records = read_csv(INPUT_MOCK_FILE)
 
-    if args.write:
+    if write_enabled:
         with open(export_file, "w") as f:
             json.dump(records, f, indent=2)
         print(f"Exported to {export_file}")
@@ -230,19 +237,20 @@ def main():
     args = parser.parse_args()
 
     if args.command == "build-v2":
-        build_v2(args)
+        build_v2(write_enabled=args.write)
     elif args.command == "rebuild":
-        rebuild(args)
+        rebuild(write_enabled=args.write)
     elif args.command == "review-active-vs-staged":
-        review_active_vs_staged(args)
+        review_active_vs_staged()
     elif args.command == "quality-report":
-        quality_report(args)
+        generate_quality_report(write_enabled=args.write)
     elif args.command == "import-playlist":
-        import_playlist(args)
+        import_playlist(write_enabled=args.write)
     elif args.command == "verify":
-        verify(args)
+        verify()
     elif args.command == "export-view":
-        export_view(args)
+        export_view(write_enabled=args.write)
+
 
 
 if __name__ == "__main__":
