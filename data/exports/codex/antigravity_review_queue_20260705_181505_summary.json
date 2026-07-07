@@ -1,0 +1,24 @@
+{
+  "handoff_dir": "data\\staging\\codex\\antigravity_handoff\\20260705_181505",
+  "review_queue_dir": "data\\staging\\codex\\antigravity_review_queues\\20260705_181505",
+  "mood_event": {
+    "review_rows": 15,
+    "hold_rows": 8891
+  },
+  "performance": {
+    "review_rows": 844,
+    "hold_rows": 8062
+  },
+  "external_links": {
+    "review_rows": 0,
+    "hold_rows": 26718
+  },
+  "files": {
+    "mood_event_review_queue": "data\\staging\\codex\\antigravity_review_queues\\20260705_181505\\mood_event_review_queue.csv",
+    "mood_event_hold.csv": "data\\staging\\codex\\antigravity_review_queues\\20260705_181505\\mood_event_hold.csv",
+    "performance_review_queue": "data\\staging\\codex\\antigravity_review_queues\\20260705_181505\\performance_review_queue.csv",
+    "performance_hold.csv": "data\\staging\\codex\\antigravity_review_queues\\20260705_181505\\performance_hold.csv",
+    "external_link_hold.csv": "data\\staging\\codex\\antigravity_review_queues\\20260705_181505\\external_link_hold.csv"
+  },
+  "recommendation": "Review mood_event_review_queue and performance_review_queue BPM/Key rows first. Do not promote external links from this batch because they are search-query only."
+}

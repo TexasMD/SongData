@@ -1,0 +1,22 @@
+{
+  "verdict": "Fits SQLite staging/review purpose, not canonical promotion purpose.",
+  "checks": {
+    "recording_id_integrity": "All three files have complete Recording ID coverage and all IDs exist in SongDB_v2/recordings.csv.",
+    "mood_event": "9672 rows; only 15 rows contain any nonblank tag suggestion. Suggested tokens mostly Last.fm genre descriptors, not controlled vocabulary.",
+    "performance": "9672 rows; all Low confidence and all Source URL values are Generative Suggestion. BPM/key nonblank values exactly duplicate existing SongDB_v2 values; default tuning/capo/difficulty/instrumentation applies to every row and should not be promoted.",
+    "external_links": "29016 rows; complete 3-site search coverage but 0 verified URLs. Suitable as search cache only.",
+    "sqlite": "Suitable for import as antigravity_* staging tables and review views. Do not overwrite recordings/external_links canonical tables."
+  },
+  "recommended_jules_action": [
+    "Import the three CSVs into SQLite staging tables only.",
+    "Create review views for nonblank tags, BPM/key suggestions, and external search URLs.",
+    "Mark external links as search_link_generated, not verified.",
+    "Do not update canonical recordings or external_links from this batch."
+  ],
+  "blocking_issues_for_promotion": [
+    "No verified external URLs.",
+    "Performance defaults are low-confidence generative placeholders.",
+    "BPM/key values duplicate existing data.",
+    "Tag suggestions are sparse and not normalized to controlled vocabulary."
+  ]
+}

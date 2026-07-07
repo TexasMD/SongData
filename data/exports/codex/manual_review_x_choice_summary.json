@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-07-05T07:17:38.717797+00:00",
+  "decisions_csv": "D:\\Music\\MusicDB\\data\\staging\\codex\\manual_review_decisions.csv",
+  "backup_path": "D:\\Music\\MusicDB\\data\\backups\\manual_review_x_choices\\20260705_021738\\manual_review_decisions.csv",
+  "marker_columns": {
+    "active": [
+      "Use Active",
+      "keep active"
+    ],
+    "staged": [
+      "Use staged",
+      "Use staged"
+    ]
+  },
+  "counts": {
+    "keep_active": 134,
+    "unmarked": 70,
+    "use_staged": 14
+  },
+  "conflicting_marked_csv_lines": []
+}

@@ -1,0 +1,69 @@
+{
+  "database": "D:\\Music\\MusicDB\\data\\staging\\jules\\music_antigravity_review.sqlite",
+  "tag_review_rows": 15,
+  "tag_flag_rows": 15,
+  "tag_tokens_not_in_controlled_vocab_rows": 15,
+  "bpm_key_review_rows": 1019,
+  "bpm_key_flag_rows": 1019,
+  "bpm_key_nonredundant_flag_rows": 12,
+  "bpm_range": [
+    69.9,
+    184.6
+  ],
+  "key_distribution_top": [
+    [
+      "F Minor",
+      105
+    ],
+    [
+      "A# Minor",
+      81
+    ],
+    [
+      "A Minor",
+      72
+    ],
+    [
+      "A# Major",
+      70
+    ],
+    [
+      "F Major",
+      63
+    ],
+    [
+      "D Minor",
+      52
+    ],
+    [
+      "A Major",
+      45
+    ],
+    [
+      "C Minor",
+      44
+    ],
+    [
+      "C Major",
+      44
+    ],
+    [
+      "E Minor",
+      40
+    ],
+    [
+      "E Major",
+      38
+    ],
+    [
+      "D Major",
+      37
+    ]
+  ],
+  "paths": {
+    "tag_flags": "data\\exports\\codex\\sqlite_antigravity_review\\v_antigravity_tag_review_flags.csv",
+    "bpm_key_flags": "data\\exports\\codex\\sqlite_antigravity_review\\v_antigravity_bpm_key_review_flags.csv",
+    "bpm_key_nonredundant_flags": "data\\exports\\codex\\sqlite_antigravity_review\\v_antigravity_bpm_key_review_nonredundant_flags.csv"
+  },
+  "verdict": "Tag suggestions are mostly incongruent with controlled mood/event/situation vocabulary. BPM/key review rows are valid-shaped but low-confidence generative and duplicate existing canonical BPM/key values, so they are not useful as new data."
+}
