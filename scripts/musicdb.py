@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from src.schema import validate_record
 from src.quality import generate_quality_report as src_generate_quality_report
-from src.sqlite_poc import insert_records, insert_v2_records, DB_PATH
+from src.sqlite_poc import insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
