@@ -19,12 +19,12 @@ jobs:
         run: |
           BASE_BRANCH=${GITHUB_REF#refs/heads/}
           PRS=$(gh pr list --base $BASE_BRANCH --state open --json number -q '.[].number')
-          
+
           if [ -z "$PRS" ]; then
             echo "No open PRs targeting $BASE_BRANCH found."
             exit 0
           fi
-          
+
           for pr in $PRS; do
             echo "Attempting to update PR #$pr..."
             if ! gh pr update $pr; then

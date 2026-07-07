@@ -149,4 +149,3 @@ Rules:
 - Do not promote search URLs as verified URLs.
 - Include enough notes for Codex to review quickly.
 ```
-

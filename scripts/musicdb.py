@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from src.schema import validate_record
 from src.quality import generate_quality_report as src_generate_quality_report
-from src.sqlite_poc import insert_v2_records, DB_PATH
+from src.sqlite_poc import insert_records, insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
@@ -54,6 +54,7 @@ def ensure_mock_file():
                 }
             )
 
+
 def build_v2(input_csv=INPUT_MOCK_FILE, write_enabled=False, sqlite_path=DB_PATH):
     print(f"build-v2: dry-run={not write_enabled}")
     if write_enabled:
@@ -65,14 +66,6 @@ def build_v2(input_csv=INPUT_MOCK_FILE, write_enabled=False, sqlite_path=DB_PATH
         ensure_mock_file()  # Usually we should use input_csv, but to keep the mock for now
         records = read_csv(input_csv)
         insert_v2_records(records, db_path=sqlite_path)
-
-        # tests/test_cli_upgraded.py expects sqlite_path to be a real SQLite DB
-        import sqlite3
-        with sqlite3.connect(sqlite_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY)")
-            conn.commit()
-
         print(f"Successfully rebuilt database with {len(records)} records.")
 
 
@@ -132,6 +125,7 @@ def rebuild(write_enabled=False):
 def review_active_vs_staged():
     print("review-active-vs-staged...")
 
+
 def generate_quality_report(
     input_csv=INPUT_MOCK_FILE, write_enabled=False, export_dir=None
 ):
@@ -140,9 +134,6 @@ def generate_quality_report(
     ensure_mock_file()
     records = read_csv(input_csv)
     report = src_generate_quality_report(records)
-
-    print("Quality Report Summary:")
-    print(f"Total songs: {len(records)}")
 
     if write_enabled:
         if export_dir is None:
@@ -169,7 +160,6 @@ def generate_quality_report(
         print("DRY RUN: Would export JSON and Markdown reports to data/exports")
         print("Report contents:")
         print(json.dumps(report, indent=2))
-
 
 
 def import_playlist(write_enabled=False):

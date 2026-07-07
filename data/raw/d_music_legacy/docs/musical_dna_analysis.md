@@ -25,7 +25,7 @@ These are the artists who have secured the most real estate in your collection:
 
 ## The Evolution of Your Taste (By Era)
 
-By analyzing the release decades cross-referenced with your top genres, a distinct timeline of your musical evolution emerges. 
+By analyzing the release decades cross-referenced with your top genres, a distinct timeline of your musical evolution emerges.
 
 ### The Foundation (1970s - 1980s)
 * **Total Tracks:** ~1,120

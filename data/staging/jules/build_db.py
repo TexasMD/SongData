@@ -125,41 +125,41 @@ TABLES = {
 
 def create_and_populate_db(base_dir: Path):
     db_path = base_dir / "music.sqlite"
-    
+
     # Overwrite DB if it already exists
     if db_path.exists():
         db_path.unlink()
-        
+
     conn = sqlite3.connect(db_path)
     # Enable foreign key constraint checking
     conn.execute("PRAGMA foreign_keys = ON;")
-    
+
     for table_name, info in TABLES.items():
         schema_def = info["schema"]
-        
+
         # Build CREATE TABLE statement
         columns_sql = []
         if info["auto_id"]:
             columns_sql.append("id INTEGER PRIMARY KEY AUTOINCREMENT")
-            
+
         for sql_col, _, sql_type in schema_def:
             columns_sql.append(f"{sql_col} {sql_type}")
-            
+
         create_stmt = f"CREATE TABLE {table_name} (\n    {', '.join(columns_sql)}\n);"
         conn.execute(create_stmt)
-        
+
         # Read and insert CSV data
         csv_file = base_dir / info["csv"]
         if csv_file.exists():
             with open(csv_file, 'r', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
-                
+
                 sql_cols = [s[0] for s in schema_def]
                 csv_cols = [s[1] for s in schema_def]
-                
+
                 placeholders = ", ".join(["?"] * len(sql_cols))
                 insert_stmt = f"INSERT INTO {table_name} ({', '.join(sql_cols)}) VALUES ({placeholders})"
-                
+
                 data_batch = []
                 for row in reader:
                     row_data = []
@@ -167,23 +167,23 @@ def create_and_populate_db(base_dir: Path):
                         val = row.get(csv_col, "")
                         if val is not None:
                             val = val.strip()
-                        
+
                         if not val:
                             val = None
                         elif "INTEGER" in sql_type and val is not None:
-                            try: 
+                            try:
                                 val = int(float(val)) # Support strings like '1995.0'
-                            except ValueError: 
+                            except ValueError:
                                 val = None
                         elif "REAL" in sql_type and val is not None:
-                            try: 
+                            try:
                                 val = float(val)
-                            except ValueError: 
+                            except ValueError:
                                 val = None
-                        
+
                         row_data.append(val)
                     data_batch.append(tuple(row_data))
-                
+
                 conn.executemany(insert_stmt, data_batch)
                 print(f"Inserted {len(data_batch)} rows into {table_name}")
         else:

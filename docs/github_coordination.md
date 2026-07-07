@@ -16,19 +16,19 @@ Purpose:
 
 ## Initial Issues
 
-- #3 Codex: reconcile active MusicDB with staged conservative candidate  
+- #3 Codex: reconcile active MusicDB with staged conservative candidate
   https://github.com/TexasMD/SongData/issues/3
 
-- #4 Antigravity: enrich mood/event tags and musician-performance metadata  
+- #4 Antigravity: enrich mood/event tags and musician-performance metadata
   https://github.com/TexasMD/SongData/issues/4
 
-- #5 Antigravity: verify SecondHandSongs, WhoSampled, and Ultimate Guitar links  
+- #5 Antigravity: verify SecondHandSongs, WhoSampled, and Ultimate Guitar links
   https://github.com/TexasMD/SongData/issues/5
 
-- #6 Jules: add MusicDB CLI, tests, quality reports, and SQLite prototype  
+- #6 Jules: add MusicDB CLI, tests, quality reports, and SQLite prototype
   https://github.com/TexasMD/SongData/issues/6
 
-- #7 Codex/Jules: promote recordings.csv as the MusicDB working layer  
+- #7 Codex/Jules: promote recordings.csv as the MusicDB working layer
   https://github.com/TexasMD/SongData/issues/7
 
 ## Local Remote
