@@ -1,14 +1,20 @@
 __pycache__/
 *.pyc
 
-# Ignore backups
-*.bak
-
-# Ignore CSVs to prevent committing full databases
+# Database and large files
 *.csv
-!data/staging/recordings_mock.csv
+*.sqlite
 
-# Ignore exports
-data/exports/*
-!data/exports/.gitkeep
+# Backups and exports
+data/backups/
+data/exports/raw/
+
+# Staging
+data/staging/antigravity/
+data/staging/codex/
+
+# Credentials and environment
 .env
+*.key
+*.token
+*.secret

@@ -1,0 +1,15 @@
+{
+  "playlist": "NRG",
+  "playlist_rows": 231,
+  "unique_playlist_song_groups": 165,
+  "duplicate_or_alternate_groups": 45,
+  "duplicate_or_alternate_rows": 111,
+  "classification_counts": {
+    "album_alternate_greatest_hits_present": 6,
+    "album_or_release_alternate": 11,
+    "needs_review": 1,
+    "probable_true_duplicate": 1,
+    "true_duplicate_same_spotify_track": 26
+  },
+  "audit_csv": "C:\\codex_work\\projects\\SongDB\\playlist_NRG_duplicate_alternate_audit.csv"
+}

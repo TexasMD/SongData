@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-07-04T19:00:46.020702+00:00",
+  "source_csv": "D:\\Music\\MusicDB\\data\\processed\\Main_Song_Database.csv",
+  "source_rows": 9672,
+  "songs_rows": 9533,
+  "recordings_rows": 9672,
+  "external_links_rows": 29016,
+  "playlist_membership_rows": 223,
+  "main_database_modified": false,
+  "link_policy": {
+    "SecondHandSongs": "Search URL generated; promote to Verified URL only after exact title/artist/version review.",
+    "WhoSampled": "Search URL generated; promote to Verified URL only after exact title/artist/version review.",
+    "Ultimate Guitar": "Search URL generated; prefer Official tab, otherwise most popular/highest-rated matching tab."
+  }
+}

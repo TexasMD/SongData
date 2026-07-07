@@ -1,0 +1,11 @@
+{
+  "updated_at": "2026-07-02T21:55:47.910319+00:00",
+  "main_database": "C:\\codex_work\\projects\\SongDB\\Main_Song_Database.csv",
+  "playlist_file": "C:\\codex_work\\projects\\SongDB\\playlists\\PLAYLIST - NRG.txt",
+  "playlist_name": "NRG",
+  "playlist_entries": 139,
+  "matched_playlist_entries": 139,
+  "unmatched_playlist_entries": 0,
+  "database_rows_marked": 231,
+  "unmatched": []
+}
