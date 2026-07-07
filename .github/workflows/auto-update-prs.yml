@@ -1,0 +1,31 @@
+name: Auto Update PRs
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  update-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update pending PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE_BRANCH=${GITHUB_REF#refs/heads/}
+          PRS=$(gh pr list --base $BASE_BRANCH --state open --json number -q '.[].number')
+          
+          if [ -z "$PRS" ]; then
+            echo "No open PRs targeting $BASE_BRANCH found."
+            exit 0
+          fi
+          
+          for pr in $PRS; do
+            echo "Attempting to update PR #$pr..."
+            gh pr update $pr || echo "Failed to update PR #$pr. It might already be up-to-date or have merge conflicts."
+          done
