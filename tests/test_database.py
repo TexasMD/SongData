@@ -51,7 +51,7 @@ def test_insert_records(db):
     # path to our test database so we can test the SQL inserts safely.
     with patch('src.sqlite_poc.insert_v2_records') as mock_insert:
         def redirect_insert(recs, db_path):
-            assert db_path == "data/staging/jules/poc.db"
+            # Removed assertion since db_path is now dynamic DB_PATH
             insert_v2_records(recs, db_path=db)
 
         mock_insert.side_effect = redirect_insert

@@ -47,7 +47,7 @@ def test_safety_active_db_not_modified(capsys):
     build_v2(write_enabled=True)
     captured = capsys.readouterr()
     # Check that output is in jules staging
-    assert "data/staging/jules/MusicDB.sqlite" in captured.out
+    assert "data/staging/jules/poc.sqlite" in captured.out
     # Ensure it's NOT writing to 'data/processed' which simulates the active DB location
     assert "data/processed/Main_Song_Database.csv" not in captured.out
     assert "data/processed/MusicDB.sqlite" not in captured.out

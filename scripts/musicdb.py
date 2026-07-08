@@ -11,58 +11,19 @@ from src.schema import validate_record
 from src.quality import generate_quality_report as src_generate_quality_report
 from src.sqlite_poc import insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
+from src.config import paths
 
-INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
 
-
-def ensure_mock_file():
-    if not os.path.exists(INPUT_MOCK_FILE):
-        os.makedirs(os.path.dirname(INPUT_MOCK_FILE), exist_ok=True)
-        with open(INPUT_MOCK_FILE, "w", newline="") as f:
-            writer = csv.DictWriter(
-                f,
-                fieldnames=[
-                    "Recording ID",
-                    "Song ID",
-                    "Title",
-                    "Artist",
-                    "Version",
-                    "Spotify Track ID",
-                    "MusicBrainz ID",
-                    "BPM",
-                    "Key",
-                    "Playlists",
-                    "Arrangement",
-                    "SHS Link",
-                ],
-            )
-            writer.writeheader()
-            writer.writerow(
-                {
-                    "Recording ID": "rec1",
-                    "Song ID": "song1",
-                    "Title": "Test Song",
-                    "Artist": "Test Artist",
-                    "Version": "",
-                    "Spotify Track ID": "sp1",
-                    "MusicBrainz ID": "mb1",
-                    "BPM": "120",
-                    "Key": "C",
-                    "Playlists": "Test;Cool",
-                    "Arrangement": "Acoustic",
-                    "SHS Link": "http://shs.com/1",
-                }
-            )
-
-def build_v2(input_csv=INPUT_MOCK_FILE, write_enabled=False, sqlite_path=DB_PATH):
+def build_v2(input_csv=None, write_enabled=False, sqlite_path=None):
+    cfg = paths()
+    input_csv = str(input_csv or cfg.recordings_csv)
+    sqlite_path = str(sqlite_path or cfg.sqlite_poc_path)
     print(f"build-v2: dry-run={not write_enabled}")
     if write_enabled:
         print("Executing write operations for build-v2...")
         print(f"Executing rebuild-db into {sqlite_path}...")
         if os.path.exists(sqlite_path):
             os.remove(sqlite_path)
-
-        ensure_mock_file()  # Usually we should use input_csv, but to keep the mock for now
         records = read_csv(input_csv)
         insert_v2_records(records, db_path=sqlite_path)
 
@@ -80,12 +41,11 @@ def rebuild(write_enabled=False):
     """
     Rebuilds the compatibility Main_Song_Database.csv from recordings.csv.
     """
+    cfg = paths()
     print(f"rebuild: dry-run={not write_enabled}")
-
-    ensure_mock_file()
-    input_file = INPUT_MOCK_FILE
-    output_dir = "data/staging/jules"
-    output_file = os.path.join(output_dir, "Main_Song_Database.csv")
+    input_file = str(cfg.recordings_csv)
+    output_dir = str(cfg.staging_dir / "jules")
+    output_file = str(cfg.staging_dir / "jules" / "Main_Song_Database.csv")
 
     if write_enabled:
         print(f"Rebuilding {output_file} from {input_file}...")
@@ -133,11 +93,11 @@ def review_active_vs_staged():
     print("review-active-vs-staged...")
 
 def generate_quality_report(
-    input_csv=INPUT_MOCK_FILE, write_enabled=False, export_dir=None
+    input_csv=None, write_enabled=False, export_dir=None
 ):
+    cfg = paths()
+    input_csv = str(input_csv or cfg.recordings_csv)
     print(f"quality-report: dry-run={not write_enabled}")
-
-    ensure_mock_file()
     records = read_csv(input_csv)
     report = src_generate_quality_report(records)
 
@@ -146,9 +106,7 @@ def generate_quality_report(
 
     if write_enabled:
         if export_dir is None:
-            export_dir = os.path.join(
-                os.path.dirname(__file__), "..", "data", "exports"
-            )
+            export_dir = str(cfg.exports_dir)
         os.makedirs(export_dir, exist_ok=True)
 
         json_file = os.path.join(export_dir, "quality_report.json")
@@ -177,9 +135,10 @@ def import_playlist(write_enabled=False):
 
 
 def verify():
+    cfg = paths()
+    input_csv = str(cfg.recordings_csv)
     print("verify...")
-    ensure_mock_file()
-    records = read_csv(INPUT_MOCK_FILE)
+    records = read_csv(input_csv)
     all_errors = []
 
     for i, record in enumerate(records):
@@ -196,15 +155,13 @@ def verify():
 
 
 def export_view(write_enabled=False):
+    cfg = paths()
+    input_csv = str(cfg.recordings_csv)
     print("export-view...")
-    export_dir = os.path.join(
-        os.path.dirname(__file__), "..", "data", "exports", "jules"
-    )
+    export_dir = str(cfg.exports_dir / "jules")
     os.makedirs(export_dir, exist_ok=True)
     export_file = os.path.join(export_dir, "export.json")
-
-    ensure_mock_file()
-    records = read_csv(INPUT_MOCK_FILE)
+    records = read_csv(input_csv)
 
     if write_enabled:
         with open(export_file, "w") as f:

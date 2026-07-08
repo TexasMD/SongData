@@ -3,9 +3,9 @@ import contextlib
 import os
 from typing import List, Dict, Any
 from .stable_id import generate_stable_id
+from .config import paths
 
-DB_PATH = "data/staging/jules/MusicDB.sqlite"
-
+DB_PATH = str(paths().sqlite_poc_path)
 
 def init_db(db_path: str = DB_PATH):
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -185,4 +185,4 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
 
 def insert_records(records: List[Dict[str, Any]]):
     # Backward compatibility for existing poc.db usage if any
-    insert_v2_records(records, db_path="data/staging/jules/poc.db")
+    insert_v2_records(records, db_path=DB_PATH)
