@@ -14,7 +14,7 @@ import datetime as dt
 import json
 import re
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, List, Tuple
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]

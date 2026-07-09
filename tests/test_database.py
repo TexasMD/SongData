@@ -2,7 +2,7 @@ import pytest
 import sqlite3
 import os
 from unittest.mock import patch
-from src.sqlite_poc import init_db, insert_v2_records, insert_records, DB_PATH
+from src.sqlite_poc import init_db, insert_v2_records, insert_records
 
 TEST_DB = "data/staging/jules/test_musicdb.sqlite"
 
