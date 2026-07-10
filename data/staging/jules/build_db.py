@@ -114,13 +114,41 @@ TAG_OPTIONS_SCHEMA = [
     ("value", "Value", "TEXT")
 ]
 
+COVER_RELATIONSHIP_CANDIDATES_SCHEMA = [
+    ("original_recording_id", "Original Recording ID", "TEXT"),
+    ("title", "Title", "TEXT"),
+    ("artist", "Artist", "TEXT"),
+    ("original_title", "Original Title", "TEXT"),
+    ("original_artist", "Original Artist", "TEXT"),
+    ("original_year", "Original Year", "TEXT"),
+    ("musicbrainz_recording_id", "MusicBrainz Recording ID", "TEXT"),
+    ("source", "Source", "TEXT"),
+    ("musicbrainz_last_checked_at", "MusicBrainz Last Checked At", "TEXT"),
+    ("coverinfo_last_checked_at", "cover.info Last Checked At", "TEXT"),
+    ("secondhandsongs_last_checked_at", "SecondHandSongs Last Checked At", "TEXT"),
+    ("whosampled_last_checked_at", "WhoSampled Last Checked At", "TEXT"),
+]
+
+SOURCE_QUERY_CHECKS_SCHEMA = [
+    ("recording_id", "Recording ID", "TEXT"),
+    ("source", "Source", "TEXT"),
+    ("query_kind", "Query Kind", "TEXT"),
+    ("last_checked_at", "Last Checked At", "TEXT"),
+    ("query_count", "Query Count", "INTEGER"),
+    ("last_result_count", "Last Result Count", "INTEGER"),
+    ("last_query_url", "Last Query URL", "TEXT"),
+    ("notes", "Notes", "TEXT"),
+]
+
 TABLES = {
     # Songs needs to be created first because recordings reference it
     "songs": {"schema": SONGS_SCHEMA, "csv": "songs.csv", "auto_id": False},
     "recordings": {"schema": RECORDINGS_SCHEMA, "csv": "recordings.csv", "auto_id": False},
     "external_links": {"schema": EXTERNAL_LINKS_SCHEMA, "csv": "external_links.csv", "auto_id": True},
     "playlist_membership": {"schema": PLAYLIST_MEMBERSHIP_SCHEMA, "csv": "playlist_membership.csv", "auto_id": True},
-    "tag_options": {"schema": TAG_OPTIONS_SCHEMA, "csv": "tag_options.csv", "auto_id": True}
+    "tag_options": {"schema": TAG_OPTIONS_SCHEMA, "csv": "tag_options.csv", "auto_id": True},
+    "cover_relationship_candidates": {"schema": COVER_RELATIONSHIP_CANDIDATES_SCHEMA, "csv": "cover_relationship_candidates.csv", "auto_id": True},
+    "source_query_checks": {"schema": SOURCE_QUERY_CHECKS_SCHEMA, "csv": "source_query_checks.csv", "auto_id": True},
 }
 
 def create_and_populate_db(base_dir: Path):

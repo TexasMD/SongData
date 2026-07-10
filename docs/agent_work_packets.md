@@ -150,3 +150,26 @@ Rules:
 - Include enough notes for Codex to review quickly.
 ```
 
+## Codex/Jules Work Packet: Cover Update Flow And Source Query Tracking
+
+```text
+Use D:\Music\MusicDB as the canonical workspace. Keep the active main CSV local and do not overwrite it wholesale.
+
+Track this work in GitHub issue #58 in TexasMD/SongData.
+
+Goal:
+Add an `Update Covers` right-click action in the UI, query WhoSampled, SecondHandSongs, and cover.info, and persist when each source was last checked.
+
+Outputs:
+- staged cover relationship candidates
+- source query tracking table/CSV
+- backend endpoint and scraper modules
+- UI menu action for selected recordings
+
+Rules:
+- Preserve source/query timestamps per recording and per source.
+- Keep parsing layout-aware and source-specific.
+- Prefer exact connected pages over generic search snippets where possible.
+- Do not overwrite the active main database directly.
+```
+

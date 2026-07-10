@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, GetContextMenuItemsParams, MenuItemDef } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 
@@ -154,18 +154,20 @@ function App() {
     }
   };
 
-  const findCovers = async () => {
-    if (!selectedSong) return;
+  const runCoverUpdate = async (rows?: Recording[]) => {
+    const targets = rows ?? selectedRows;
+    if (!targets.length) return;
     setLoading(true);
     setError('');
     try {
-      const data = await fetchJson<{ covers: Recording[] }>(`${API_BASE_URL}/covers`, {
+      const data = await fetchJson<{ covers: Recording[]; stage_dir?: string; run_id?: string }>(`${API_BASE_URL}/cover_updates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recording_id: selectedSong.recording_id }),
+        body: JSON.stringify({ recording_ids: targets.map((row) => row.recording_id) }),
       });
       setRecordings(data.covers ?? []);
-      setQueryNote(`COVERS / VERSIONS FOR ${selectedSong.recording_id}`);
+      const targetLabel = targets.length === 1 ? targets[0].recording_id : `${targets.length} TRACKS`;
+      setQueryNote(`COVER UPDATE FOR ${targetLabel}${data.stage_dir ? ` -> ${data.stage_dir}` : ''}`);
       setSelectedRows([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Cover search failed');
@@ -233,6 +235,22 @@ function App() {
     setVisibleColumns((previous) => ({ ...previous, [field]: !previous[field] }));
   };
 
+  const getContextMenuItems = (params: GetContextMenuItemsParams<Recording>) => {
+    const selected = gridRef.current?.api.getSelectedRows() ?? [];
+    const targets = selected.length > 0 ? selected : params.node?.data ? [params.node.data] : [];
+    const items = [...(params.defaultItems ?? [])] as Array<string | MenuItemDef>;
+    if (targets.length > 0) {
+      items.push('separator');
+      items.push({
+        name: `Update Covers${targets.length > 1 ? ` (${targets.length})` : ''}`,
+        action: () => {
+          void runCoverUpdate(targets);
+        },
+      });
+    }
+    return items as any;
+  };
+
   return (
     <div className="console-shell">
       <header className="console-topbar">
@@ -293,6 +311,7 @@ function App() {
               rowData={recordings}
               columnDefs={columnDefs}
               defaultColDef={defaultColDef}
+              getContextMenuItems={getContextMenuItems}
               rowSelection={{
                 mode: 'multiRow',
                 checkboxes: true,
@@ -368,7 +387,7 @@ function App() {
         <div className="selection-bar">
           <strong>{selectedRows.length} TRACKS SELECTED</strong>
           <button onClick={findSimilar} disabled={selectedRows.length !== 1}>Similar</button>
-          <button onClick={findCovers} disabled={selectedRows.length !== 1}>Find Covers</button>
+          <button onClick={() => void runCoverUpdate()} disabled={selectedRows.length === 0}>Update Covers</button>
           <button onClick={clearSelection}>Clear</button>
         </div>
       )}

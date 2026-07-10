@@ -3,7 +3,13 @@ import random
 import requests
 import logging
 import re
+from datetime import datetime, timezone
+from typing import Callable
 from urllib.parse import quote_plus
+
+from src.cover_info_client import scrape_cover_info
+from src.secondhandsongs_client import scrape_secondhandsongs as scrape_secondhandsongs_client
+from src.whosampled_client import scrape_whosampled as scrape_whosampled_client
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +21,8 @@ BROWSER_USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0"
 ]
+
+SourceCheckCallback = Callable[[str, str, str, int | None, str], None]
 
 def get_random_headers():
     return {
@@ -28,7 +36,31 @@ def get_random_headers():
         "Sec-Fetch-Dest": "document",
     }
 
-def fetch_work_id_for_recording(title: str, artist: str) -> str:
+
+def _emit_checked(
+    on_source_checked: SourceCheckCallback | None,
+    *,
+    source: str,
+    query_kind: str,
+    query_url: str,
+    result_count: int | None,
+) -> None:
+    if on_source_checked is None:
+        return
+    on_source_checked(
+        source,
+        query_kind,
+        query_url,
+        result_count,
+        datetime.now(timezone.utc).isoformat(),
+    )
+
+
+def fetch_work_id_for_recording(
+    title: str,
+    artist: str,
+    on_source_checked: SourceCheckCallback | None = None,
+) -> str:
     """Finds the MusicBrainz Work ID for a given title and artist."""
     url = "https://musicbrainz.org/ws/2/recording/"
     params = {
@@ -39,10 +71,12 @@ def fetch_work_id_for_recording(title: str, artist: str) -> str:
     try:
         resp = requests.get(url, params=params, headers=headers, timeout=10)
         if resp.status_code != 200:
+            _emit_checked(on_source_checked, source="MusicBrainz", query_kind="recording_search", query_url=resp.url if resp is not None else url, result_count=0)
             return None
-            
+        
         data = resp.json()
         recordings = data.get("recordings", [])
+        _emit_checked(on_source_checked, source="MusicBrainz", query_kind="recording_search", query_url=resp.url, result_count=len(recordings))
         if not recordings:
             return None
             
@@ -59,13 +93,23 @@ def fetch_work_id_for_recording(title: str, artist: str) -> str:
             relations = rec_data.get("relations", [])
             for rel in relations:
                 if rel.get("target-type") == "work" and rel.get("work"):
+                    _emit_checked(on_source_checked, source="MusicBrainz", query_kind="work_lookup", query_url=lookup_resp.url, result_count=len(relations))
                     return rel["work"]["id"]
+            _emit_checked(on_source_checked, source="MusicBrainz", query_kind="work_lookup", query_url=lookup_resp.url, result_count=len(relations))
+            return None
+        _emit_checked(on_source_checked, source="MusicBrainz", query_kind="work_lookup", query_url=lookup_resp.url if lookup_resp is not None else lookup_url, result_count=0)
     except Exception as e:
         logger.error(f"Error fetching work ID: {e}")
         
     return None
 
-def fetch_covers_for_work(work_id: str, original_artist: str) -> list:
+def fetch_covers_for_work(
+    work_id: str,
+    original_title: str,
+    original_artist: str,
+    original_year: str = "",
+    on_source_checked: SourceCheckCallback | None = None,
+) -> list:
     """Fetches covers (recordings) for a given Work ID."""
     url = "https://musicbrainz.org/ws/2/recording"
     params = {
@@ -94,103 +138,67 @@ def fetch_covers_for_work(work_id: str, original_artist: str) -> list:
                         "artist": artist_name,
                         "musicbrainz_recording_id": mbid,
                         "cover_song": "Yes",
+                        "original_title": original_title,
+                        "original_artist": original_artist,
+                        "original_year": original_year,
                         "source": "MusicBrainz"
                     })
+            _emit_checked(on_source_checked, source="MusicBrainz", query_kind="work_covers", query_url=resp.url, result_count=len(recordings))
+        else:
+            _emit_checked(on_source_checked, source="MusicBrainz", query_kind="work_covers", query_url=resp.url if resp is not None else url, result_count=0)
     except Exception as e:
         logger.error(f"Error fetching covers for work {work_id}: {e}")
         
     return covers
 
-def scrape_secondhandsongs(title: str, artist: str) -> list:
-    """Scrapes SecondHandSongs using search."""
-    covers = []
-    try:
-        # Politeness delay
-        time.sleep(random.uniform(1.0, 2.5))
-        url = f"https://secondhandsongs.com/search/performance?op_title=contains&title={quote_plus(title)}"
-        headers = get_random_headers()
-        resp = requests.get(url, headers=headers, timeout=15)
-        if resp.status_code == 200:
-            # Broad regex to match typical table row structure for performances
-            matches = re.finditer(r'<a[^>]+href="/performance/[^>]+>([^<]+)</a>.*?<a[^>]+href="/artist/[^>]+>([^<]+)</a>', resp.text, re.IGNORECASE | re.DOTALL)
-            for m in matches:
-                c_title = m.group(1).strip()
-                c_artist = m.group(2).strip()
-                if c_artist.lower() != artist.lower():
-                    covers.append({
-                        "title": c_title,
-                        "artist": c_artist,
-                        "musicbrainz_recording_id": None,
-                        "cover_song": "Yes",
-                        "source": "SecondHandSongs"
-                    })
-    except Exception as e:
-        logger.error(f"SHS scrape error: {e}")
-    return covers
+def scrape_secondhandsongs(
+    title: str,
+    artist: str,
+    original_year: str = "",
+    on_source_checked: SourceCheckCallback | None = None,
+) -> list:
+    return scrape_secondhandsongs_client(
+        title,
+        artist,
+        original_year,
+        callback=on_source_checked,
+    )
 
-def scrape_whosampled(title: str, artist: str) -> list:
-    """Scrapes WhoSampled using a delayed, browser-mimicking approach."""
-    covers = []
-    try:
-        # Crucial Initial delay as requested by user
-        time.sleep(random.uniform(2.5, 6.5))
-        
-        search_url = f"https://www.whosampled.com/search/tracks/?q={quote_plus(title + ' ' + artist)}"
-        headers = get_random_headers()
-        session = requests.Session()
-        session.headers.update(headers)
-        
-        search_resp = session.get(search_url, timeout=15)
-        if search_resp.status_code != 200:
-            return covers
-            
-        # Extract track URL from search results
-        match = re.search(r'<a[^>]+href="([^"]+)"[^>]*class="trackName[^"]*"', search_resp.text)
-        if not match:
-            return covers
-            
-        track_path = match.group(1) 
-        
-        # Add random delay before navigating to covers page
-        time.sleep(random.uniform(3.5, 7.5))
-        
-        covers_url = f"https://www.whosampled.com{track_path}Covered/"
-        covers_resp = session.get(covers_url, timeout=15)
-        
-        if covers_resp.status_code == 200:
-            # Extract covers
-            track_matches = re.finditer(r'class="trackName[^"]*">([^<]+)</a>.*?class="trackArtist[^"]*">\s*(?:<a[^>]*>)?([^<]+)(?:</a>)?', covers_resp.text, re.IGNORECASE | re.DOTALL)
-            
-            for m in track_matches:
-                c_title = m.group(1).strip()
-                c_artist = m.group(2).strip()
-                if c_artist.lower() != artist.lower():
-                    covers.append({
-                        "title": c_title,
-                        "artist": c_artist,
-                        "musicbrainz_recording_id": None,
-                        "cover_song": "Yes",
-                        "source": "WhoSampled"
-                    })
-    except Exception as e:
-        logger.error(f"WhoSampled scrape error: {e}")
-        
-    return covers
+def scrape_whosampled(
+    title: str,
+    artist: str,
+    original_year: str = "",
+    on_source_checked: SourceCheckCallback | None = None,
+) -> list:
+    return scrape_whosampled_client(
+        title,
+        artist,
+        callback=on_source_checked,
+        recording_id="",
+    )
 
-def scrape_covers(title: str, artist: str) -> list:
+def scrape_covers(
+    title: str,
+    artist: str,
+    original_year: str = "",
+    on_source_checked: SourceCheckCallback | None = None,
+) -> list:
     """End-to-end function to scrape cover songs from all sources and deduplicate."""
     covers = []
     
     # 1. MusicBrainz
-    work_id = fetch_work_id_for_recording(title, artist)
+    work_id = fetch_work_id_for_recording(title, artist, on_source_checked=on_source_checked)
     if work_id:
-        covers.extend(fetch_covers_for_work(work_id, artist))
+        covers.extend(fetch_covers_for_work(work_id, title, artist, original_year, on_source_checked=on_source_checked))
         
-    # 2. SecondHandSongs
-    covers.extend(scrape_secondhandsongs(title, artist))
+    # 2. cover.info
+    covers.extend(scrape_cover_info(title, artist, original_year, callback=on_source_checked))
+
+    # 3. SecondHandSongs
+    covers.extend(scrape_secondhandsongs(title, artist, original_year, on_source_checked=on_source_checked))
     
-    # 3. WhoSampled
-    covers.extend(scrape_whosampled(title, artist))
+    # 4. WhoSampled
+    covers.extend(scrape_whosampled(title, artist, original_year, on_source_checked=on_source_checked))
     
     # Deduplicate based on title and artist
     unique_covers = {}
@@ -208,6 +216,10 @@ def scrape_covers(title: str, artist: str) -> list:
             # Retain MBID if one has it and the other doesn't
             if cover.get("musicbrainz_recording_id") and not unique_covers[key].get("musicbrainz_recording_id"):
                 unique_covers[key]["musicbrainz_recording_id"] = cover["musicbrainz_recording_id"]
+
+            for field in ("original_title", "original_artist", "original_year"):
+                if cover.get(field) and not unique_covers[key].get(field):
+                    unique_covers[key][field] = cover[field]
                 
     return list(unique_covers.values())
 

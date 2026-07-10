@@ -58,3 +58,9 @@ Before active-vs-staged merge work, read these local files:
 - `D:\Music\MusicDB\data\exports\active_vs_staged_review\summary.json`
 - `D:\Music\MusicDB\data\exports\active_vs_staged_review\spotify_id_normalization_review.csv`
 - `D:\Music\MusicDB\data\exports\active_vs_staged_review\field_differences_unambiguous_song_keys.csv`
+
+## GitHub Coordination
+
+- GitHub repo: `TexasMD/SongData`
+- Current master coordination issue: `#58`
+- Use GitHub issues for durable task tracking; keep full database files local.

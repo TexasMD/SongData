@@ -14,6 +14,7 @@ if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
 from src.db_access import DEFAULT_DB_PATH, execute_query
+from src.cover_update_service import run_cover_update
 from src.similarity_engine import find_similar_recordings
 from src.vibe_search import search_by_vibe
 
@@ -45,6 +46,10 @@ class CommonalitiesRequest(BaseModel):
 
 class CoverRequest(BaseModel):
     recording_id: str
+
+
+class CoverUpdateRequest(BaseModel):
+    recording_ids: list[str]
 
 
 def records_from_query(query: str, params: list[Any] | tuple[Any, ...] | None = None) -> list[dict[str, Any]]:
@@ -164,6 +169,23 @@ def api_covers(request: CoverRequest) -> dict[str, list[dict[str, Any]]]:
         return {"covers": covers}
     except HTTPException:
         raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/cover_updates")
+def api_cover_updates(request: CoverUpdateRequest) -> dict[str, Any]:
+    try:
+        result = run_cover_update(request.recording_ids)
+        return {
+            "run_id": result.run_id,
+            "stage_dir": str(result.run_dir),
+            "recordings": result.recordings,
+            "covers": result.covers,
+            "source_query_checks": result.source_query_checks,
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

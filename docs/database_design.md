@@ -21,6 +21,10 @@ One row per specific recording or version. This is the best operational layer fo
 
 Keep search links separate from verified exact links. A generated search URL is useful, but it is not the same as a confirmed SecondHandSongs, WhoSampled, or Ultimate Guitar match.
 
+### Source Query Tracking
+
+Track when a source was last queried, not just whether a link exists. The cover pipeline now stages `cover_relationship_candidates.csv` plus `source_query_checks.csv` so each song can retain a `last_checked_at` timestamp for sources such as WhoSampled, SecondHandSongs, and MusicBrainz.
+
 ### Playlist Membership
 
 Playlist membership should be a table, not duplicated rows. A song can appear in many playlists, and a playlist can contain many songs.

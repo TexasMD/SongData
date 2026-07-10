@@ -126,6 +126,20 @@ Deliverables:
 - export script back to CSV
 - SQLite prototype notes
 
+## Workstream 9: Cover Update Flow and Source Query Tracking
+
+Owner: Codex with Jules support
+
+Goal: add a right-click `Update Covers` action, query WhoSampled, SecondHandSongs, and cover.info, and persist per-source `last_checked_at` timestamps.
+
+Deliverables:
+
+- cover-update endpoint and scraper flow
+- staged cover relationship candidates
+- source query checks table and CSV export
+- UI menu action for selected recordings
+- reviewable GitHub status updates
+
 ## Integration Cadence
 
 1. Each agent writes staged outputs.

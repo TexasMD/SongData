@@ -31,6 +31,16 @@ Purpose:
 - #7 Codex/Jules: promote recordings.csv as the MusicDB working layer  
   https://github.com/TexasMD/SongData/issues/7
 
+## Current Coordination Issue
+
+- #58 MusicDB coordination: central task map for SongData  
+  https://github.com/TexasMD/SongData/issues/58
+
+Purpose:
+
+- Keep the full MusicDB and song-data task map durable in GitHub.
+- Add cover-update work, source-query timestamps, and ongoing coordination items to the repo.
+
 ## Local Remote
 
 The local `D:\Music\MusicDB` git repo has this remote:

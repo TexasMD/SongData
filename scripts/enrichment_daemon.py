@@ -4,6 +4,7 @@ import time
 import requests
 from pathlib import Path
 from urllib.parse import quote_plus
+from datetime import datetime, timezone
 
 # Configuration
 PROJECT_ROOT = Path(r"D:\Music\MusicDB")
@@ -13,6 +14,7 @@ STAGING_DIR = PROJECT_ROOT / "data" / "staging" / "antigravity"
 MOOD_CSV = STAGING_DIR / "mood_event_tag_suggestions.csv"
 PERF_CSV = STAGING_DIR / "performance_metadata_suggestions.csv"
 EXT_CSV = STAGING_DIR / "external_link_verification.csv"
+SOURCE_CHECKS_CSV = STAGING_DIR / "source_query_checks.csv"
 STATUS_FILE = STAGING_DIR / "enrichment_status.json"
 
 USER_AGENT = "MusicDB-Enrichment-Daemon/1.0 ( seth@example.com )"
@@ -31,6 +33,10 @@ def ensure_file_headers():
     if not EXT_CSV.exists():
         with open(EXT_CSV, 'w', newline='', encoding='utf-8-sig') as f:
             csv.writer(f).writerow(["Recording ID", "Site", "Verified URL", "Search URL", "Match Type", "Confidence", "Notes"])
+
+    if not SOURCE_CHECKS_CSV.exists():
+        with open(SOURCE_CHECKS_CSV, 'w', newline='', encoding='utf-8-sig') as f:
+            csv.writer(f).writerow(["Recording ID", "Source", "Query Kind", "Last Checked At", "Query Count", "Last Result Count", "Last Query URL", "Notes"])
 
 def get_processed_ids():
     processed = set()
@@ -90,11 +96,13 @@ def run_daemon():
     # Open files in append mode
     with open(MOOD_CSV, 'a', newline='', encoding='utf-8-sig') as f_mood, \
          open(PERF_CSV, 'a', newline='', encoding='utf-8-sig') as f_perf, \
-         open(EXT_CSV, 'a', newline='', encoding='utf-8-sig') as f_ext:
+         open(EXT_CSV, 'a', newline='', encoding='utf-8-sig') as f_ext, \
+         open(SOURCE_CHECKS_CSV, 'a', newline='', encoding='utf-8-sig') as f_checks:
          
         writer_mood = csv.writer(f_mood)
         writer_perf = csv.writer(f_perf)
         writer_ext = csv.writer(f_ext)
+        writer_checks = csv.writer(f_checks)
         
         for row in targets:
             rec_id = row.get("Recording ID")
@@ -106,6 +114,8 @@ def run_daemon():
             
             # Fetch tags
             tags, url = fetch_musicbrainz_tags(artist, title)
+            checked_at = datetime.now(timezone.utc).isoformat()
+            writer_checks.writerow([rec_id, "MusicBrainz", "tag_lookup", checked_at, 1, len(tags), url, "Queried for tagging enrichment"])
             # Dummy categorization for the prototype
             moods = [t for t in tags if t in ['sad', 'happy', 'chill', 'angry']]
             
@@ -124,6 +134,7 @@ def run_daemon():
             f_mood.flush()
             f_perf.flush()
             f_ext.flush()
+            f_checks.flush()
             
             current_count += 1
             if current_count % 10 == 0:
