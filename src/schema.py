@@ -52,7 +52,7 @@ def validate_record(record: Dict[str, Any]) -> List[str]:
         if field not in record or record[field] is None or record[field] == "":
             # For backward compatibility during migration, we might relax the Recording ID/Song ID requirement
             # if we are dealing with older V1 records, but for V2 these are required.
-            if field in ["Recording ID", "Song ID"] and ("Title" in record and "Artist" in record and not "Recording ID" in record):
+            if field in ["Recording ID", "Song ID"] and ("Title" in record and "Artist" in record and "Recording ID" not in record):
                  pass # Skip error if it looks like a V1 record
             else:
                  errors.append(f"Missing required field: {field}")

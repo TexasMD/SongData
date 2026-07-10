@@ -10,7 +10,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, List, Tuple
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
