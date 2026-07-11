@@ -1,0 +1,24 @@
+Add standalone desktop application wrapper for MusicDB
+
+Creates a PyQt6-based wrapper to run the MusicDB UI as a standalone
+Windows application. It launches the FastAPI backend in a background
+thread and displays the React frontend in a native QWebEngineView window.
+
+Includes a README with instructions for running and future PyInstaller
+packaging.
+
+Status: review_passed
+Owner: Jules
+Inputs:
+- D:\Music\MusicDB\frontend\src\App.tsx
+- D:\Music\MusicDB\api\main.py
+Outputs:
+- apps\musicdb_desktop\main.py
+- apps\musicdb_desktop\backend_manager.py
+- apps\musicdb_desktop\README.md
+- tests\test_desktop_wrapper.py
+Counts: 3 new test cases covering backend start, stop, and process lifecycle.
+Safety: 100% (No direct Main_Song_Database.csv writes. Process manager handles child process teardown).
+Validation: pytest tests/test_desktop_wrapper.py (All passed).
+Blocked/Questions: None.
+Next: Codex to package with PyInstaller if/when needed.
