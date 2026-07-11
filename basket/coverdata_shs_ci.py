@@ -20,6 +20,24 @@ from src.cover_info_client import scrape_cover_info
 
 OUTPUT_PATH = ROOT / "basket" / "coverdata_shs_ci.csv"
 USER_AGENT = "MusicDB-CoverScraper/1.0 ( Windows )"
+CSV_FIELDNAMES = [
+    "performing_artist",
+    "title",
+    "year",
+    "album",
+    "genre",
+    "original_artist",
+    "original_song_title",
+    "original_album",
+    "original_year",
+    "secondhandsongs_artist_id",
+    "secondhandsongs_title_id",
+    "secondhandsongs_performance_id",
+    "secondhandsongs_album_id",
+    "source",
+    "queried_at_utc",
+    "source_url",
+]
 
 
 def utc_now_iso() -> str:
@@ -32,6 +50,10 @@ def clean(text: str | None) -> str:
 
 def normalize(text: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+
+
+def uri_id(value: Any) -> str:
+    return str(value or "").rsplit("/", 1)[-1] if value else ""
 
 
 def load_existing_keys(path: Path) -> set[tuple[str, str, str, str]]:
@@ -60,20 +82,7 @@ def ensure_output_header(path: Path) -> None:
     with path.open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=[
-                "performing_artist",
-                "title",
-                "year",
-                "album",
-                "genre",
-                "original_artist",
-                "original_song_title",
-                "original_album",
-                "original_year",
-                "source",
-                "queried_at_utc",
-                "source_url",
-            ],
+            fieldnames=CSV_FIELDNAMES,
         )
         writer.writeheader()
 
@@ -85,20 +94,7 @@ def append_rows(path: Path, rows: list[dict[str, Any]]) -> None:
     with path.open("a", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=[
-                "performing_artist",
-                "title",
-                "year",
-                "album",
-                "genre",
-                "original_artist",
-                "original_song_title",
-                "original_album",
-                "original_year",
-                "source",
-                "queried_at_utc",
-                "source_url",
-            ],
+            fieldnames=CSV_FIELDNAMES,
         )
         writer.writerows(rows)
 
@@ -304,14 +300,26 @@ def shs_extract_rows(title: str, artist: str) -> list[dict[str, Any]]:
     original_title = clean(original_detail.get("title")) or clean(title)
     original_artist = clean((original_detail.get("performer") or {}).get("name")) or clean(artist)
     original_year = clean(str(original_detail.get("date") or original_detail.get("firstReleaseDate") or ""))[:4]
+    title_id = ""
+    works = original_detail.get("works") or []
+    for work in works:
+        if isinstance(work, dict) and work.get("uri"):
+            title_id = uri_id(work.get("uri"))
+            break
+    if not title_id:
+        title_id = uri_id(original_detail.get("uri"))
+
     original_album = ""
+    album_id = ""
     releases = original_detail.get("releases") or []
     for release in releases:
         if isinstance(release, dict) and release.get("entitySubType") == "album":
             original_album = clean(release.get("title"))
+            album_id = uri_id(release.get("uri"))
             break
     if not original_album and releases:
         original_album = clean(releases[0].get("title"))
+        album_id = uri_id(releases[0].get("uri"))
 
     rows: list[dict[str, Any]] = []
     for cover in original_detail.get("covers") or []:
@@ -330,6 +338,10 @@ def shs_extract_rows(title: str, artist: str) -> list[dict[str, Any]]:
                 "original_song_title": original_title,
                 "original_album": original_album,
                 "original_year": original_year,
+                "secondhandsongs_artist_id": uri_id((cover.get("performer") or {}).get("uri")),
+                "secondhandsongs_title_id": title_id,
+                "secondhandsongs_performance_id": uri_id(cover.get("uri")),
+                "secondhandsongs_album_id": album_id,
                 "source": "SecondHandSongs",
                 "queried_at_utc": utc_now_iso(),
                 "source_url": str(cover.get("uri") or ""),
@@ -354,6 +366,10 @@ def cover_info_rows(title: str, artist: str) -> list[dict[str, Any]]:
                 "original_song_title": clean(item.get("original_title")),
                 "original_album": clean(str(item.get("original_album") or "")),
                 "original_year": clean(str(item.get("original_year") or "")),
+                "secondhandsongs_artist_id": "",
+                "secondhandsongs_title_id": "",
+                "secondhandsongs_performance_id": "",
+                "secondhandsongs_album_id": "",
                 "source": "cover.info",
                 "queried_at_utc": queried_at,
                 "source_url": "https://cover.info/api/song/get-detailed",
