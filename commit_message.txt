@@ -1,24 +1,22 @@
-Add standalone desktop application wrapper for MusicDB
+Add PyInstaller packaging for desktop application
 
-Creates a PyQt6-based wrapper to run the MusicDB UI as a standalone
-Windows application. It launches the FastAPI backend in a background
-thread and displays the React frontend in a native QWebEngineView window.
-
-Includes a README with instructions for running and future PyInstaller
-packaging.
+This update fixes the PyInstaller fork bomb issue by converting the
+BackendManager from `subprocess` to `multiprocessing` with `freeze_support()`.
+It also updates the FastAPI backend to correctly serve the static
+frontend files from the PyInstaller `_MEIPASS` bundle, and adds
+a `package_desktop.sh` build script.
 
 Status: review_passed
 Owner: Jules
 Inputs:
-- D:\Music\MusicDB\frontend\src\App.tsx
-- D:\Music\MusicDB\api\main.py
+- apps/musicdb_desktop/backend_manager.py
+- apps/musicdb_desktop/main.py
+- api/main.py
 Outputs:
-- apps\musicdb_desktop\main.py
-- apps\musicdb_desktop\backend_manager.py
-- apps\musicdb_desktop\README.md
-- tests\test_desktop_wrapper.py
-Counts: 3 new test cases covering backend start, stop, and process lifecycle.
-Safety: 100% (No direct Main_Song_Database.csv writes. Process manager handles child process teardown).
-Validation: pytest tests/test_desktop_wrapper.py (All passed).
+- package_desktop.sh
+- Executable in dist/MusicDB
+Counts: 3 updated files, 1 build script added.
+Safety: 100% (No database writes. Fork bomb prevented via freeze_support).
+Validation: pytest tests/test_desktop_wrapper.py (All passed) and PyInstaller test build.
 Blocked/Questions: None.
-Next: Codex to package with PyInstaller if/when needed.
+Next: Ready for desktop use or distribution.

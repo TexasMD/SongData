@@ -1,33 +1,29 @@
-import subprocess
+import multiprocessing
 import sys
-from pathlib import Path
-import os
 import psutil
+from pathlib import Path
+
+# Important: This target function must be importable by the multiprocessing module.
+def _run_uvicorn(port: int):
+    import uvicorn
+    from api.main import app
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 class BackendManager:
     def __init__(self, port: int = 8000):
         self.port = port
         self.process = None
-        self.project_root = str(Path(__file__).resolve().parents[2])
 
     def start(self):
         if self.is_running():
             return False
 
-        env = os.environ.copy()
-        env["PYTHONPATH"] = self.project_root
-
-        # Use sys.executable to ensure we use the same Python environment
-        cmd = [sys.executable, "-m", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--port", str(self.port)]
-
-        self.process = subprocess.Popen(
-            cmd,
-            cwd=self.project_root,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+        self.process = multiprocessing.Process(
+            target=_run_uvicorn,
+            args=(self.port,),
+            daemon=True
         )
+        self.process.start()
         return True
 
     def stop(self):
@@ -35,20 +31,24 @@ class BackendManager:
             return False
 
         try:
-            # On Windows, terminating the parent might not terminate the children (like uvicorn workers).
-            # We use psutil to kill the process tree to be safe and avoid orphans.
+            # Cleanly terminate the multiprocessing tree
             parent = psutil.Process(self.process.pid)
             for child in parent.children(recursive=True):
                 child.terminate()
             parent.terminate()
 
-            # Wait for them to actually die
             gone, alive = psutil.wait_procs(parent.children(recursive=True) + [parent], timeout=3)
             for p in alive:
                 p.kill()
-
         except psutil.NoSuchProcess:
             pass
+
+        if self.process:
+            self.process.join(timeout=1)
+            # If it's still somehow alive, brute force it (though it shouldn't be after psutil)
+            if self.process.is_alive():
+                self.process.terminate()
+                self.process.join()
 
         self.process = None
         return True
@@ -56,7 +56,7 @@ class BackendManager:
     def is_running(self):
         if self.process is None:
             return False
-        if self.process.poll() is not None:
+        if not self.process.is_alive():
             self.process = None
             return False
         return True

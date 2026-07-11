@@ -1,5 +1,5 @@
 import sys
-import threading
+import multiprocessing
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
@@ -23,12 +23,9 @@ class MusicDBDesktop(QMainWindow):
         self.setGeometry(100, 100, 1280, 800)
 
         self.backend = BackendManager(port=8000)
-        # Using the standard dev server port for now
-        self.frontend_url = "http://localhost:5173"
+        self.frontend_url = "http://127.0.0.1:8000"
 
         self.init_ui()
-
-        # Start backend automatically by default
         self.toggle_backend()
 
     def init_ui(self):
@@ -59,7 +56,7 @@ class MusicDBDesktop(QMainWindow):
         self.status_label = QLabel("Backend: Stopped")
         self.status.addPermanentWidget(self.status_label)
 
-        # Timer to poll backend status in case it dies
+        # Timer to poll backend status
         self.status_timer = QTimer(self)
         self.status_timer.timeout.connect(self.update_status)
         self.status_timer.start(2000)
@@ -76,8 +73,7 @@ class MusicDBDesktop(QMainWindow):
             self.status.showMessage("Starting backend...", 2000)
             success = self.backend.start()
             if success:
-                # Wait briefly then load UI
-                QTimer.singleShot(1000, self.load_ui)
+                QTimer.singleShot(1500, self.load_ui)
             self.update_status()
 
     def update_status(self):
@@ -97,6 +93,9 @@ class MusicDBDesktop(QMainWindow):
         super().closeEvent(event)
 
 if __name__ == "__main__":
+    # REQUIRED for PyInstaller + multiprocessing on Windows to prevent fork bombs
+    multiprocessing.freeze_support()
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     window = MusicDBDesktop()

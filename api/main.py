@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 root_dir = Path(__file__).resolve().parents[1]
@@ -25,7 +28,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -57,7 +60,7 @@ def records_from_query(query: str, params: list[Any] | tuple[Any, ...] | None = 
     return json.loads(df.to_json(orient="records"))
 
 
-@app.get("/")
+@app.get("/api/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok", "database": str(DEFAULT_DB_PATH)}
 
@@ -219,6 +222,26 @@ def api_commonalities(request: CommonalitiesRequest) -> dict[str, Any]:
 
     return {"count": len(rows), "commonalities": shared, "records": rows}
 
+
+# --- Static Files Serving ---
+# Resolve frontend build path correctly for both dev and PyInstaller environments
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    # Running in PyInstaller bundle
+    frontend_dist_path = Path(sys._MEIPASS) / "frontend" / "dist"
+else:
+    # Running locally
+    frontend_dist_path = root_dir / "frontend" / "dist"
+
+if frontend_dist_path.exists() and frontend_dist_path.is_dir():
+    app.mount("/assets", StaticFiles(directory=frontend_dist_path / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(full_path: str):
+        file_path = frontend_dist_path / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        # Fallback to index.html for SPA routing
+        return FileResponse(frontend_dist_path / "index.html")
 
 if __name__ == "__main__":
     import uvicorn
