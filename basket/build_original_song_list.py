@@ -16,6 +16,20 @@ def normalize(text: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
 
 
+def collapse_spaces(text: str | None) -> str:
+    return " ".join((text or "").split()).strip()
+
+
+def looks_like_appended_suffix(prefix: str, suffix: str) -> bool:
+    if not prefix or not suffix:
+        return False
+    if len(suffix) < 6 and not any(sep in prefix for sep in [",", "&", " and ", " feat", " featuring "]):
+        return False
+    if len(prefix.split()) <= 1 and len(suffix) < 8 and not any(sep in prefix for sep in [",", "&", " and "]):
+        return False
+    return True
+
+
 def load_cover_pairs(path: Path) -> set[tuple[str, str]]:
     pairs: set[tuple[str, str]] = set()
     with path.open("r", newline="", encoding="utf-8-sig") as handle:
@@ -42,6 +56,23 @@ def should_remove(row: dict[str, str], cover_pairs: set[tuple[str, str]]) -> boo
     return False
 
 
+def clean_artist_field(row: dict[str, str]) -> str:
+    artist = collapse_spaces(row.get("Artist"))
+    for title_field in ("Base Title", "Title"):
+        candidate = collapse_spaces(row.get(title_field))
+        if not candidate:
+            continue
+        normalized_artist = normalize(artist)
+        normalized_candidate = normalize(candidate)
+        if not normalized_artist or not normalized_candidate:
+            continue
+        if normalized_artist.endswith(normalized_candidate) and len(artist) > len(candidate):
+            prefix = collapse_spaces(artist[: len(artist) - len(candidate)].rstrip(" -:;,/|"))
+            if prefix and looks_like_appended_suffix(prefix, candidate):
+                return prefix
+    return artist
+
+
 def build_original_song_list(song_data_path: Path, cover_list_path: Path, output_path: Path) -> tuple[int, int]:
     cover_pairs = load_cover_pairs(cover_list_path)
 
@@ -54,6 +85,8 @@ def build_original_song_list(song_data_path: Path, cover_list_path: Path, output
             if should_remove(row, cover_pairs):
                 removed += 1
                 continue
+            row = dict(row)
+            row["Artist"] = clean_artist_field(row)
             kept_rows.append(row)
             kept += 1
 
