@@ -134,28 +134,31 @@ def run_daemon(batch_size: int = 25):
             covers = scrape_covers(title, artist, original_year, on_source_checked=on_source_checked)
             
             if covers:
-                for cover in covers:
-                    conn.execute(
-                        """
-                        INSERT INTO antigravity_cover_candidates
-                        (original_recording_id, title, artist, original_title, original_artist, original_year, musicbrainz_recording_id, source, musicbrainz_last_checked_at, coverinfo_last_checked_at, secondhandsongs_last_checked_at, whosampled_last_checked_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            rec_id,
-                            cover["title"],
-                            cover["artist"],
-                            cover.get("original_title", title),
-                            cover.get("original_artist", artist),
-                            cover.get("original_year", original_year),
-                            cover.get("musicbrainz_recording_id"),
-                            cover.get("source", ""),
-                            source_checks.get("MusicBrainz", ""),
-                            source_checks.get("cover.info", ""),
-                            source_checks.get("SecondHandSongs", ""),
-                            source_checks.get("WhoSampled", ""),
-                        )
+                cover_tuples = [
+                    (
+                        rec_id,
+                        cover["title"],
+                        cover["artist"],
+                        cover.get("original_title", title),
+                        cover.get("original_artist", artist),
+                        cover.get("original_year", original_year),
+                        cover.get("musicbrainz_recording_id"),
+                        cover.get("source", ""),
+                        source_checks.get("MusicBrainz", ""),
+                        source_checks.get("cover.info", ""),
+                        source_checks.get("SecondHandSongs", ""),
+                        source_checks.get("WhoSampled", ""),
                     )
+                    for cover in covers
+                ]
+                conn.executemany(
+                    """
+                    INSERT INTO antigravity_cover_candidates
+                    (original_recording_id, title, artist, original_title, original_artist, original_year, musicbrainz_recording_id, source, musicbrainz_last_checked_at, coverinfo_last_checked_at, secondhandsongs_last_checked_at, whosampled_last_checked_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    cover_tuples
+                )
             
             conn.execute(
                 "INSERT INTO antigravity_cover_daemon_log (recording_id, covers_found) VALUES (?, ?)",
