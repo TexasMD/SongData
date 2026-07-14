@@ -58,19 +58,29 @@ def get_schema_summary(db_path: Path = DEFAULT_DB_PATH) -> str:
     """Returns a string describing the database schema for the LLM."""
     with get_connection(db_path) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
+        cursor.execute('''
+            SELECT m.name AS table_name, p.name AS column_name, p.type AS column_type
+            FROM sqlite_master m
+            JOIN pragma_table_info(m.name) p
+            WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%'
+        ''')
+        rows = cursor.fetchall()
 
         schema_lines = []
-        for (table_name,) in tables:
-            # Skip sqlite internal tables
-            if table_name.startswith("sqlite_"):
-                continue
-            schema_lines.append(f"Table: {table_name}")
-            cursor.execute(f"PRAGMA table_info({table_name});")
-            columns = cursor.fetchall()
-            for col in columns:
-                schema_lines.append(f"  - {col['name']} ({col['type']})")
-            schema_lines.append("") # Empty line between tables
+        current_table = None
+
+        for row in rows:
+            table_name = row["table_name"]
+
+            if table_name != current_table:
+                if current_table is not None:
+                    schema_lines.append("")
+                schema_lines.append(f"Table: {table_name}")
+                current_table = table_name
+
+            schema_lines.append(f"  - {row['column_name']} ({row['column_type']})")
+
+        if current_table is not None:
+            schema_lines.append("") # Empty line after the last table
 
         return "\n".join(schema_lines)
