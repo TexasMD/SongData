@@ -30,4 +30,4 @@ def test_dry_run_by_default():
     # This is more of a code inspection test or a behavioral test if we mock things
     # We can check if the main function or specific functions handle write_enabled correctly
     assert hasattr(musicdb, "import_playlist")
-    assert hasattr(musicdb, "build_v2")
+    assert not hasattr(musicdb, "build_v2") # It moved to src.commands
