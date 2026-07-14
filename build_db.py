@@ -50,6 +50,9 @@ def build_db():
     ''')
 
     playlist_cache = {}
+    cursor.execute('SELECT id, name FROM Playlists')
+    for row in cursor.fetchall():
+        playlist_cache[row[1]] = row[0]
 
     # Read CSVs and insert data
     for filename in os.listdir(staging_dir):
@@ -86,12 +89,12 @@ def build_db():
                     playlists = [p.strip() for p in playlists_str.split(';') if p.strip()]
                     for playlist in playlists:
                         if playlist not in playlist_cache:
-                            cursor.execute('''
-                            INSERT OR IGNORE INTO Playlists (name) VALUES (?)
-                            ''', (playlist,))
-
-                            cursor.execute('SELECT id FROM Playlists WHERE name = ?', (playlist,))
-                            playlist_cache[playlist] = cursor.fetchone()[0]
+                            cursor.execute('INSERT OR IGNORE INTO Playlists (name) VALUES (?)', (playlist,))
+                            if cursor.rowcount > 0:
+                                playlist_cache[playlist] = cursor.lastrowid
+                            else:
+                                cursor.execute('SELECT id FROM Playlists WHERE name = ?', (playlist,))
+                                playlist_cache[playlist] = cursor.fetchone()[0]
 
                         playlist_id = playlist_cache[playlist]
                         playlists_for_songs.append((song_id, playlist_id))
