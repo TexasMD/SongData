@@ -34,7 +34,7 @@ def is_safe_query(query: str) -> bool:
     if not cleaned.startswith("SELECT"):
         return False
 
-    forbidden = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "GRANT", "REVOKE"]
+    forbidden = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "GRANT", "REVOKE", "ATTACH", "PRAGMA", "DETACH", "CREATE", "REPLACE"]
     for word in forbidden:
         if re.search(rf'\b{word}\b', cleaned):
             return False

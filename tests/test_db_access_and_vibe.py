@@ -44,3 +44,10 @@ def test_search_by_vibe_builds_parameterized_select():
     assert params[-1] == 100
     assert "%dark%" in params
     assert "%dance%" in params
+
+def test_is_safe_query_rejects_additional_unsafe_keywords():
+    assert not is_safe_query("SELECT * FROM recordings; ATTACH DATABASE 'malicious.sqlite' AS ext")
+    assert not is_safe_query("SELECT * FROM recordings; PRAGMA foreign_keys = OFF")
+    assert not is_safe_query("SELECT * FROM recordings; DETACH DATABASE ext")
+    assert not is_safe_query("SELECT * FROM recordings; CREATE TABLE malicious (id INTEGER)")
+    assert not is_safe_query("SELECT * FROM recordings; REPLACE INTO recordings VALUES ('1', 'bad')")
