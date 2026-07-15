@@ -16,6 +16,7 @@ assignees: []
 
 - [ ] Canonical system
 - [ ] Active vs staged reconciliation
+- [ ] Questionable row cleanup and verification
 - [ ] Recordings working layer
 - [ ] Mood/event tagging
 - [ ] Musician-performance metadata
