@@ -15,6 +15,7 @@ if str(root_dir) not in sys.path:
 
 from src.db_access import DEFAULT_DB_PATH, execute_query
 from src.cover_update_service import run_cover_update
+from src.normalization import normalize_display_row
 from src.similarity_engine import find_similar_recordings
 from src.vibe_search import search_by_vibe
 
@@ -52,9 +53,19 @@ class CoverUpdateRequest(BaseModel):
     recording_ids: list[str]
 
 
-def records_from_query(query: str, params: list[Any] | tuple[Any, ...] | None = None) -> list[dict[str, Any]]:
-    df = execute_query(query, params=params)
-    return json.loads(df.to_json(orient="records"))
+def records_from_query(
+    query: str,
+    params: list[Any] | tuple[Any, ...] | None = None,
+    *,
+    db_path=DEFAULT_DB_PATH,
+) -> list[dict[str, Any]]:
+    df = execute_query(query, params=params, db_path=db_path)
+    rows = json.loads(df.to_json(orient="records"))
+    return [normalize_display_row(row) for row in rows]
+
+
+def sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [normalize_display_row(record) for record in records]
 
 
 @app.get("/")
@@ -100,7 +111,7 @@ def get_recordings(
 @app.post("/api/vibe_search")
 def api_vibe_search(request: VibeRequest) -> dict[str, Any]:
     try:
-        sql, params = search_by_vibe(request.query)
+        sql, params = search_by_vibe(request.query, db_path=DEFAULT_DB_PATH)
         return {"sql": sql, "results": records_from_query(sql, params)}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -121,7 +132,7 @@ def api_similarity(
 ) -> dict[str, list[dict[str, Any]]]:
     try:
         results = find_similar_recordings(recording_id, str(DEFAULT_DB_PATH), limit=limit)
-        return {"results": results}
+        return {"results": sanitize_records(results)}
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
@@ -159,14 +170,14 @@ def api_covers(request: CoverRequest) -> dict[str, list[dict[str, Any]]]:
                 mood_tags,
                 playlists
             FROM recordings
-            WHERE LOWER(title) = LOWER(?)
-              AND COALESCE(artist, '') != COALESCE(?, '')
+            WHERE NORMALIZE_SEARCH_TEXT(title) = NORMALIZE_SEARCH_TEXT(?)
+              AND NORMALIZE_SEARCH_TEXT(COALESCE(artist, '')) != NORMALIZE_SEARCH_TEXT(COALESCE(?, ''))
             ORDER BY artist, album
             LIMIT 100
             """,
             [title, artist],
         )
-        return {"covers": covers}
+        return {"covers": sanitize_records(covers)}
     except HTTPException:
         raise
     except Exception as exc:
@@ -217,7 +228,7 @@ def api_commonalities(request: CommonalitiesRequest) -> dict[str, Any]:
     if bpms:
         shared["bpm_range"] = [min(bpms), max(bpms)]
 
-    return {"count": len(rows), "commonalities": shared, "records": rows}
+    return {"count": len(rows), "commonalities": shared, "records": sanitize_records(rows)}
 
 
 if __name__ == "__main__":

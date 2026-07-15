@@ -6,6 +6,8 @@ from typing import Any, Sequence
 
 import pandas as pd
 
+from src.normalization import normalize_display_text, normalize_search_text
+
 DEFAULT_DB_PATH = Path(
     os.environ.get(
         "MUSICDB_SQLITE_PATH",
@@ -22,6 +24,8 @@ def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     db_uri = f"file:{db_path.absolute().as_posix()}?mode=ro"
     conn = sqlite3.connect(db_uri, uri=True)
     conn.row_factory = sqlite3.Row
+    conn.create_function("NORMALIZE_DISPLAY_TEXT", 1, normalize_display_text)
+    conn.create_function("NORMALIZE_SEARCH_TEXT", 1, normalize_search_text)
     return conn
 
 def is_safe_query(query: str) -> bool:
