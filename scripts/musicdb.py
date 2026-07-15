@@ -3,6 +3,7 @@ import sys
 import json
 import os
 import csv
+from pathlib import Path
 
 # Add parent directory to path so we can import src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -14,6 +15,24 @@ from src.sqlite_poc import insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 from src.commands import build_reference_db as reference_db_command
 from src.commands import metadata_audit as metadata_audit_command
+from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
+from scripts.verify_youtube_music_takeout import build_verified_takeout_export
+
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_TAKEOUT_INPUT = Path(
+    os.environ.get(
+        "YOUTUBE_MUSIC_TAKEOUT_PLAYLIST_DIR",
+        PROJECT_DIR / "data" / "imports" / "youtube_music_takeout" / "playlists",
+    )
+)
+DEFAULT_TAKEOUT_OUTPUT = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_playlist_videos_deduped.csv"
+DEFAULT_TAKEOUT_SONGS = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_songs.csv"
+DEFAULT_TAKEOUT_CACHE = PROJECT_DIR / "tmp" / "youtube_music_playlist_metadata_cache.json"
+DEFAULT_TAKEOUT_VERIFIED = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verified.csv"
+DEFAULT_TAKEOUT_UNMATCHED = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_unmatched.csv"
+DEFAULT_TAKEOUT_VERIFICATION_SUMMARY = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verification_summary.json"
+DEFAULT_TAKEOUT_VERIFICATION_CACHE = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verification_cache.json"
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
 
@@ -175,8 +194,58 @@ def generate_quality_report(
 
 
 
-def import_playlist(write_enabled=False):
+def import_playlist(
+    write_enabled=False,
+    input_dir=DEFAULT_TAKEOUT_INPUT,
+    output=DEFAULT_TAKEOUT_OUTPUT,
+    songs_output=DEFAULT_TAKEOUT_SONGS,
+    cache=DEFAULT_TAKEOUT_CACHE,
+    workers=8,
+):
     print(f"import-playlist: dry-run={not write_enabled}")
+    print(f"Input: {input_dir}")
+    print(f"Output: {output}")
+    print(f"Songs output: {songs_output}")
+    print(f"Cache: {cache}")
+    if not write_enabled:
+        print("DRY RUN: Would extract, dedupe, enrich, and write YouTube Music Takeout playlist metadata.")
+        print("DRY RUN: Would also write a compact song list with youtube music song ID, title, artist, album, year, and genre.")
+        print("DRY RUN: The resulting export can be consumed by build_songdb_v2.py for playlist membership matching.")
+        return
+
+    result = build_takeout_export(input_dir, output, cache, workers=workers)
+    songs = build_takeout_song_export(result.rows, songs_output)
+    print(f"Wrote {len(songs)} unique songs to {songs_output}")
+    print(json.dumps(result.summary, indent=2))
+
+
+def verify_youtube_music_takeout(
+    write_enabled=False,
+    input_csv=DEFAULT_TAKEOUT_OUTPUT,
+    output_csv=DEFAULT_TAKEOUT_VERIFIED,
+    unmatched_csv=DEFAULT_TAKEOUT_UNMATCHED,
+    summary_json=DEFAULT_TAKEOUT_VERIFICATION_SUMMARY,
+    cache=DEFAULT_TAKEOUT_VERIFICATION_CACHE,
+    workers=6,
+):
+    print(f"verify-youtube-music-takeout: dry-run={not write_enabled}")
+    print(f"Input: {input_csv}")
+    print(f"Output: {output_csv}")
+    print(f"Unmatched: {unmatched_csv}")
+    if not write_enabled:
+        print("DRY RUN: Would check the 3531 title/artist rows against Spotify and iTunes.")
+        print("DRY RUN: Would write a canonical metadata CSV plus a separate unmatched review CSV.")
+        return
+
+    summary = build_verified_takeout_export(
+        input_csv,
+        output_csv,
+        unmatched_csv,
+        summary_json,
+        cache,
+        workers=workers,
+    )
+    print(json.dumps(summary, indent=2))
 
 
 def verify():
@@ -258,6 +327,26 @@ def main():
     )
 
     parser_import = subparsers.add_parser("import-playlist", help="Import a playlist")
+    parser_import_ytm = subparsers.add_parser(
+        "import-youtube-music-takeout",
+        help="Import and enrich YouTube Music Takeout playlist exports",
+    )
+    parser_verify_ytm = subparsers.add_parser(
+        "verify-youtube-music-takeout",
+        help="Verify YouTube Music Takeout rows against Spotify and iTunes",
+    )
+    for subparser in (parser_import, parser_import_ytm):
+        subparser.add_argument("--input-dir", type=Path, default=DEFAULT_TAKEOUT_INPUT)
+        subparser.add_argument("--output", type=Path, default=DEFAULT_TAKEOUT_OUTPUT)
+        subparser.add_argument("--songs-output", type=Path, default=DEFAULT_TAKEOUT_SONGS)
+        subparser.add_argument("--cache", type=Path, default=DEFAULT_TAKEOUT_CACHE)
+        subparser.add_argument("--workers", type=int, default=8)
+    parser_verify_ytm.add_argument("--input", type=Path, default=DEFAULT_TAKEOUT_OUTPUT)
+    parser_verify_ytm.add_argument("--output", type=Path, default=DEFAULT_TAKEOUT_VERIFIED)
+    parser_verify_ytm.add_argument("--unmatched", type=Path, default=DEFAULT_TAKEOUT_UNMATCHED)
+    parser_verify_ytm.add_argument("--summary", type=Path, default=DEFAULT_TAKEOUT_VERIFICATION_SUMMARY)
+    parser_verify_ytm.add_argument("--cache", type=Path, default=DEFAULT_TAKEOUT_VERIFICATION_CACHE)
+    parser_verify_ytm.add_argument("--workers", type=int, default=6)
 
     parser_verify = subparsers.add_parser("verify", help="Verify data integrity")
 
@@ -285,8 +374,25 @@ def main():
         review_active_vs_staged()
     elif args.command == "quality-report":
         generate_quality_report(write_enabled=args.write)
-    elif args.command == "import-playlist":
-        import_playlist(write_enabled=args.write)
+    elif args.command in {"import-playlist", "import-youtube-music-takeout"}:
+        import_playlist(
+            write_enabled=args.write,
+            input_dir=args.input_dir,
+            output=args.output,
+            songs_output=args.songs_output,
+            cache=args.cache,
+            workers=args.workers,
+        )
+    elif args.command == "verify-youtube-music-takeout":
+        verify_youtube_music_takeout(
+            write_enabled=args.write,
+            input_csv=args.input,
+            output_csv=args.output,
+            unmatched_csv=args.unmatched,
+            summary_json=args.summary,
+            cache=args.cache,
+            workers=args.workers,
+        )
     elif args.command == "verify":
         verify()
     elif args.command == "export-view":

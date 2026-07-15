@@ -1,15 +1,28 @@
+import argparse
 import csv
 import hashlib
 import json
 import re
+import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote_plus
+
+# Allow direct execution from the repo root.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.normalization import normalize_display_text
+from src.normalization import normalize_search_text
+from src.youtube_music_takeout import load_takeout_export, match_takeout_export_to_recordings
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 SOURCE_CSV = PROJECT_DIR / "data" / "processed" / "Main_Song_Database.csv"
 OUT_DIR = PROJECT_DIR / "SongDB_v2"
+DEFAULT_TAKEOUT_EXPORT = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_playlist_videos_deduped.csv"
+DEFAULT_TAKEOUT_VERIFIED_EXPORT = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verified.csv"
+DEFAULT_TAKEOUT_VERIFICATION_SUMMARY = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verification_summary.json"
 
 
 VERSION_PATTERNS = [
@@ -115,10 +128,32 @@ def write_csv(path, fieldnames, rows):
     with path.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+        for row in rows:
+            normalized = {key: normalize_display_text(value) for key, value in row.items()}
+            writer.writerow(normalized)
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Build SongDB v2 exports from Main_Song_Database.csv.")
+    parser.add_argument(
+        "--youtube-music-takeout-export",
+        type=Path,
+        default=DEFAULT_TAKEOUT_EXPORT,
+        help="Optional deduped YouTube Music takeout export to merge into playlist_membership.csv.",
+    )
+    parser.add_argument(
+        "--skip-youtube-music-takeout",
+        action="store_true",
+        help="Skip merging YouTube Music takeout playlist memberships even if the export exists.",
+    )
+    parser.add_argument(
+        "--youtube-music-takeout-verified-export",
+        type=Path,
+        default=DEFAULT_TAKEOUT_VERIFIED_EXPORT,
+        help="Optional verified YouTube Music takeout metadata export to include in SongDB_v2.",
+    )
+    args = parser.parse_args()
+
     with SOURCE_CSV.open("r", encoding="utf-8-sig", newline="") as f:
         source_rows = list(csv.DictReader(f))
 
@@ -175,13 +210,16 @@ def main():
             "Song ID": song_id,
             "Main DB CSV Line": index,
             "Title": display_title,
+            "Title Search": normalize_search_text(display_title),
             "Canonical Title": title,
             "Version": version,
             "Artist": artist,
+            "Artist Search": normalize_search_text(artist),
             "Original Artist": first_nonblank(row, "Original Artist", "Orig Artist"),
             "Covering Artist": clean(row.get("Covering Artist")),
             "Cover Song": clean(row.get("Cover Song")),
             "Album": album,
+            "Album Search": normalize_search_text(album),
             "Alternate Albums": clean(row.get("Alternate Albums")),
             "Release Year": clean(row.get("Year")),
             "Duration": clean(row.get("Duration")),
@@ -272,6 +310,43 @@ def main():
                 }
             )
 
+    takeout_summary = {
+        "enabled": False,
+        "export_path": "",
+        "matched_video_ids": 0,
+        "membership_rows_added": 0,
+        "unmatched_video_ids": 0,
+    }
+    takeout_verification_summary = {
+        "enabled": False,
+        "export_path": "",
+        "rows_verified": 0,
+        "rows_unmatched": 0,
+    }
+    takeout_unmatched_rows = []
+    if not args.skip_youtube_music_takeout and args.youtube_music_takeout_export.exists():
+        takeout_rows = load_takeout_export(args.youtube_music_takeout_export)
+        match_result = match_takeout_export_to_recordings(takeout_rows, recordings)
+        playlist_membership.extend(match_result.membership_rows)
+        takeout_unmatched_rows = match_result.unmatched_rows
+        takeout_summary = {
+            "enabled": True,
+            "export_path": str(args.youtube_music_takeout_export),
+            "matched_video_ids": len(takeout_rows) - len(match_result.unmatched_rows),
+            "membership_rows_added": len(match_result.membership_rows),
+            "unmatched_video_ids": len(match_result.unmatched_rows),
+        }
+
+    verified_takeout_rows = []
+    if args.youtube_music_takeout_verified_export.exists():
+        verified_takeout_rows = load_takeout_export(args.youtube_music_takeout_verified_export)
+        takeout_verification_summary = {
+            "enabled": True,
+            "export_path": str(args.youtube_music_takeout_verified_export),
+            "rows_verified": len(verified_takeout_rows),
+            "rows_unmatched": 0,
+        }
+
     songs = list(songs_by_id.values())
 
     recording_fields = [
@@ -279,13 +354,16 @@ def main():
         "Song ID",
         "Main DB CSV Line",
         "Title",
+        "Title Search",
         "Canonical Title",
         "Version",
         "Artist",
+        "Artist Search",
         "Original Artist",
         "Covering Artist",
         "Cover Song",
         "Album",
+        "Album Search",
         "Alternate Albums",
         "Release Year",
         "Duration",
@@ -421,6 +499,31 @@ def main():
     write_csv(OUT_DIR / "external_links.csv", link_fields, external_links)
     write_csv(OUT_DIR / "playlist_membership.csv", playlist_fields, playlist_membership)
     write_csv(OUT_DIR / "tag_options.csv", ["Category", "Value"], tag_options)
+    if takeout_unmatched_rows:
+        write_csv(
+            OUT_DIR / "youtube_music_takeout_unmatched.csv",
+            [
+                "videoID",
+                "title",
+                "artist",
+                "year",
+                "album",
+                "source_playlists",
+                "metadata_lookup_status",
+                "match_status",
+            ],
+            takeout_unmatched_rows,
+        )
+    if verified_takeout_rows:
+        write_csv(OUT_DIR / "youtube_music_takeout_verified.csv", list(verified_takeout_rows[0].keys()), verified_takeout_rows)
+    (OUT_DIR / "youtube_music_takeout_summary.json").write_text(
+        json.dumps(takeout_summary, indent=2),
+        encoding="utf-8",
+    )
+    (OUT_DIR / "youtube_music_takeout_verification_summary.json").write_text(
+        json.dumps(takeout_verification_summary, indent=2),
+        encoding="utf-8",
+    )
 
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -431,6 +534,8 @@ def main():
         "external_links_rows": len(external_links),
         "playlist_membership_rows": len(playlist_membership),
         "main_database_modified": False,
+        "youtube_music_takeout": takeout_summary,
+        "youtube_music_takeout_verification": takeout_verification_summary,
         "link_policy": {
             "SecondHandSongs": "Search URL generated; promote to Verified URL only after exact title/artist/version review.",
             "WhoSampled": "Search URL generated; promote to Verified URL only after exact title/artist/version review.",
@@ -454,6 +559,10 @@ Files
 - recordings.csv: one row per specific recording/version imported from the main database.
 - external_links.csv: one row per external service link option per recording.
 - playlist_membership.csv: normalized playlist membership.
+- youtube_music_takeout_unmatched.csv: takeout rows that could not be matched confidently to an existing recording, when present.
+- youtube_music_takeout_summary.json: merge counts for the takeout import path.
+- youtube_music_takeout_verified.csv: canonical YouTube Music Takeout metadata verified against Spotify/iTunes, when present.
+- youtube_music_takeout_verification_summary.json: counts for the verified metadata export, when present.
 - tag_options.csv: starter controlled vocabulary for mood, event, difficulty, and link-status fields.
 - manifest.json: generation counts and policy notes.
 
@@ -474,6 +583,10 @@ External link rules
 - Ultimate Guitar Search URL is generated for every recording.
 - Verified URL fields are intentionally blank until an exact page has been checked.
 - For Ultimate Guitar, prefer Official tabs. If no Official tab exists, use the most popular/highest-rated matching tab.
+
+YouTube Music takeout rules
+- When a deduped YouTube Music takeout export exists at the default export path, merge exact title+artist matches into playlist_membership.csv.
+- Leave ambiguous or unmatched takeout rows out of the write set and list them in youtube_music_takeout_unmatched.csv.
 """
     (OUT_DIR / "README.txt").write_text(readme, encoding="utf-8")
 

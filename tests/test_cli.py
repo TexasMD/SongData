@@ -69,6 +69,19 @@ def test_quality_report_write():
     assert os.path.exists(md_file)
 
 
+def test_import_youtube_music_takeout_dry_run():
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "import-youtube-music-takeout"], capture_output=True, text=True)
+    assert "import-playlist: dry-run=True" in result.stdout
+    assert "YouTube Music Takeout" in result.stdout
+    assert "Songs output" in result.stdout
+
+
+def test_verify_youtube_music_takeout_dry_run():
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "verify-youtube-music-takeout"], capture_output=True, text=True)
+    assert "verify-youtube-music-takeout: dry-run=True" in result.stdout
+    assert "Spotify and iTunes" in result.stdout
+
+
 def test_build_reference_db_dry_run():
     result = subprocess.run([sys.executable, "scripts/musicdb.py", "build-reference-db"], capture_output=True, text=True)
     assert "build-reference-db: dry-run=True" in result.stdout
