@@ -31,6 +31,7 @@ class MusicDBPaths:
     exports_dir: Path
     backups_dir: Path
     sqlite_poc_path: Path
+    reference_db_path: Path
 
 
 def paths(root: Path | None = None) -> MusicDBPaths:
@@ -51,6 +52,7 @@ def paths(root: Path | None = None) -> MusicDBPaths:
         exports_dir=data_dir / "exports",
         backups_dir=data_dir / "backups",
         sqlite_poc_path=data_dir / "staging" / "jules" / "poc.sqlite",
+        reference_db_path=data_dir / "staging" / "jules" / "reference_ids.sqlite",
     )
 
 

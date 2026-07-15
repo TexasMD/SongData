@@ -67,3 +67,21 @@ def test_quality_report_write():
     assert "Exported JSON report to" in result.stdout
     assert os.path.exists(json_file)
     assert os.path.exists(md_file)
+
+
+def test_build_reference_db_dry_run():
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "build-reference-db"], capture_output=True, text=True)
+    assert "build-reference-db: dry-run=True" in result.stdout
+    assert "reference_ids.sqlite" in result.stdout
+
+
+def test_metadata_audit_dry_run():
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "metadata-audit"], capture_output=True, text=True)
+    assert "metadata-audit: dry-run=True" in result.stdout
+    assert "Dual-verified rows" in result.stdout
+
+
+def test_metadata_audit_main_dry_run():
+    result = subprocess.run([sys.executable, "scripts/musicdb.py", "metadata-audit-main"], capture_output=True, text=True)
+    assert "metadata-audit: dry-run=True" in result.stdout
+    assert "Main_Song_Database.csv" in result.stdout

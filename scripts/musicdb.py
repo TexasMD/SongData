@@ -9,8 +9,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from src.schema import validate_record
 from src.quality import generate_quality_report as src_generate_quality_report
+from src.config import paths as musicdb_paths
 from src.sqlite_poc import insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
+from src.commands import build_reference_db as reference_db_command
+from src.commands import metadata_audit as metadata_audit_command
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
 
@@ -214,6 +217,22 @@ def export_view(write_enabled=False):
         print(f"dry-run: Would export to {export_file}")
 
 
+def build_reference_db(write_enabled=False):
+    reference_db_command.run(write=write_enabled, paths=musicdb_paths())
+
+
+def metadata_audit(write_enabled=False):
+    metadata_audit_command.run(write=write_enabled, paths=musicdb_paths())
+
+
+def metadata_audit_main(write_enabled=False):
+    metadata_audit_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        input_csv=musicdb_paths().active_main_csv,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -243,6 +262,18 @@ def main():
     parser_verify = subparsers.add_parser("verify", help="Verify data integrity")
 
     parser_export = subparsers.add_parser("export-view", help="Export data view")
+    parser_reference_db = subparsers.add_parser(
+        "build-reference-db",
+        help="Build the separate reference-ID SQLite database",
+    )
+    parser_metadata_audit = subparsers.add_parser(
+        "metadata-audit",
+        help="Audit dual-source verification and normalization incidents",
+    )
+    parser_metadata_audit_main = subparsers.add_parser(
+        "metadata-audit-main",
+        help="Audit the active compatibility CSV for dual-source verification and normalization incidents",
+    )
 
     args = parser.parse_args()
 
@@ -260,6 +291,12 @@ def main():
         verify()
     elif args.command == "export-view":
         export_view(write_enabled=args.write)
+    elif args.command == "build-reference-db":
+        build_reference_db(write_enabled=args.write)
+    elif args.command == "metadata-audit":
+        metadata_audit(write_enabled=args.write)
+    elif args.command == "metadata-audit-main":
+        metadata_audit_main(write_enabled=args.write)
 
 
 
