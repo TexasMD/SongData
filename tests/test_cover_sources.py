@@ -198,6 +198,43 @@ def test_secondhandsongs_client_uses_api_key(monkeypatch):
     assert client.session.headers["X-API-Key"] == "test-shs-key"
 
 
+def test_secondhandsongs_client_paginates_until_total_results(monkeypatch):
+    client = SecondHandSongsClient()
+    pages_seen = []
+
+    def fake_get(url, params=None, timeout=None):
+        page = params.get("page", 0)
+        pages_seen.append(page)
+        rows = [
+            {
+                "entityType": "performance",
+                "uri": f"https://secondhandsongs.com/performance/{page}-{index}",
+                "title": params["title"],
+                "performer": {"name": f"Artist {page}-{index}"},
+                "isOriginal": False,
+            }
+            for index in range(2)
+        ]
+        if page == 2:
+            rows = rows[:1]
+        return FakeResponse(
+            200,
+            {
+                "totalResults": 5,
+                "resultPage": rows,
+                "skippedResults": page * 2,
+            },
+            f"{url}?page={page}",
+        )
+
+    monkeypatch.setattr(client.session, "get", fake_get)
+
+    rows = client.search_performances("Blackbird", page_size=2, max_pages=10)
+
+    assert len(rows) == 5
+    assert pages_seen == [0, 1, 2]
+
+
 def test_whosampled_parser_handles_track_connections():
     client = WhoSampledClient()
     html = """

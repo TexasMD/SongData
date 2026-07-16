@@ -6,7 +6,7 @@ import os
 import re
 from typing import Any, Callable
 
-import cloudscraper
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +43,8 @@ def _normalize_artist(text: str | None) -> str:
 
 class SecondHandSongsClient:
     def __init__(self, api_key: str | None = None) -> None:
-        self.session = cloudscraper.create_scraper(
-            browser={"browser": "chrome", "platform": "windows", "mobile": False}
-        )
+        self.session = requests.Session()
+        self.base_url = "https://api.secondhandsongs.com"
         self.session.headers.update({"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
         api_key = api_key or os.environ.get("SECONDHANDSONGS_API_KEY", "")
         if api_key:
@@ -56,15 +55,15 @@ class SecondHandSongsClient:
         title: str,
         *,
         performer: str = "",
-        page: int = 1,
+        page: int = 0,
         page_size: int = 100,
         callback: SourceCheckCallback | None = None,
         recording_id: str = "",
     ) -> dict[str, Any]:
-        params = {"title": title, "page": page, "pageSize": page_size, "format": "json"}
+        params = {"title": title, "page": page, "pageSize": page_size}
         if performer:
             params["performer"] = performer
-        resp = self.session.get("https://secondhandsongs.com/search/performance", params=params, timeout=30)
+        resp = self.session.get(f"{self.base_url}/search/performance", params=params, timeout=30)
         payload: dict[str, Any] = {}
         if resp.status_code == 200:
             try:
@@ -78,7 +77,7 @@ class SecondHandSongsClient:
             callback,
             source="SecondHandSongs",
             query_kind="search_performance",
-            query_url=resp.url if resp is not None else "https://secondhandsongs.com/search/performance",
+            query_url=resp.url if resp is not None else f"{self.base_url}/search/performance",
             result_count=len(results),
         )
         return payload
@@ -91,10 +90,10 @@ class SecondHandSongsClient:
         callback: SourceCheckCallback | None = None,
         recording_id: str = "",
         page_size: int = 100,
-        max_pages: int = 8,
+        max_pages: int = 20,
     ) -> list[dict[str, Any]]:
         collected: list[dict[str, Any]] = []
-        for page in range(1, max_pages + 1):
+        for page in range(max_pages):
             payload = self._search_page(
                 title,
                 performer=performer,
@@ -107,6 +106,10 @@ class SecondHandSongsClient:
             if not results:
                 break
             collected.extend([item for item in results if isinstance(item, dict)])
+            total_results = int(payload.get("totalResults") or 0)
+            skipped_results = int(payload.get("skippedResults") or page * page_size)
+            if total_results and skipped_results + len(results) >= total_results:
+                break
             if len(results) < page_size:
                 break
         return collected
@@ -136,7 +139,6 @@ class SecondHandSongsClient:
             callback=callback,
             recording_id=recording_id,
             page_size=100,
-            max_pages=8,
         )
 
         exact_matches = [

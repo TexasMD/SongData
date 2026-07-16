@@ -11,16 +11,28 @@ Observed result:
 | Source | Status | Result |
 | --- | --- | --- |
 | `cover.info` | Functional | Returned 210 cover/original relationship rows for `Hallelujah` / `Leonard Cohen`. |
-| `SecondHandSongs` | Not currently useful through this client | Current `search/performance?format=json` calls returned 0 rows for the same known cover-heavy query. |
+| `SecondHandSongs` | Functional after API-domain/pagination fix | The dedicated API domain returned 425 exact-title cover/original relationship rows for the same known cover-heavy query. |
 | `WhoSampled` | Blocked in current environment | Search requests returned HTTP 403 after backoff attempts. |
 
-SecondHandSongs supports an optional API key via:
+SecondHandSongs API access works through `https://api.secondhandsongs.com`.
+The API can be used without a key at lower rate limits. If SHS issues a real
+project key, set it via:
 
 ```powershell
 $env:SECONDHANDSONGS_API_KEY = "<your key>"
 ```
 
-The client sends this as `X-API-Key` when present. Do not commit the key.
+The client sends this as `X-API-Key` when present. Do not commit private keys.
+The public key shown in SHS documentation appears to be an example and returned
+`401 Unauthorized` in this environment.
+
+Implementation notes:
+
+- Use `https://api.secondhandsongs.com`, not the website search URL, for live API calls.
+- SHS search pages are zero-based.
+- Do not send `format=json` to the dedicated API domain.
+- `pageSize=100` works; larger page sizes returned `400 Bad Request`.
+- For `Hallelujah`, page 8 returned no rows even though `totalResults` reported more results. Treat the current result as complete for the accessible API window, not necessarily complete for the entire SHS database without an issued API key.
 
 Local parser/update tests still pass:
 
@@ -34,8 +46,8 @@ Result: 6 passed.
 
 The existing cover scraping system is tenuous:
 
-- `cover.info` is the only live source confirmed to return complete-looking results today.
-- `SecondHandSongs` code has parser coverage, but the live endpoint path did not return results for a known high-coverage song.
+- `cover.info` returns complete-looking results today.
+- `SecondHandSongs` returns live API results after using the dedicated API domain and zero-based pagination; deeper completeness may require a real issued key or a different endpoint strategy.
 - `WhoSampled` parser coverage exists, but live access is blocked by anti-bot behavior in this environment.
 
 Do not merge PR `#60` or any replacement WhoSampled implementation until it proves equal or better behavior against this smoke test and the existing parser tests.
