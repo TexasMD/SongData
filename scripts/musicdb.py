@@ -19,6 +19,7 @@ from src.commands import build_nyov_db as nyov_db_command
 from src.commands import nyov_report as nyov_report_command
 from src.commands import verify_nyov_batch as verify_nyov_batch_command
 from src.commands import nyov_verification_summary as nyov_verification_summary_command
+from src.commands import nyov_promotion_review as nyov_promotion_review_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -365,6 +366,15 @@ def nyov_verification_summary(write_enabled=False, db_path=None, output_dir=None
     )
 
 
+def nyov_promotion_review(write_enabled=False, db_path=None, output_dir=None):
+    nyov_promotion_review_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        db_path=db_path,
+        output_dir=output_dir,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -458,6 +468,12 @@ def main():
     )
     parser_nyov_verification_summary.add_argument("--db-path", type=Path, default=None)
     parser_nyov_verification_summary.add_argument("--output-dir", type=Path, default=None)
+    parser_nyov_promotion_review = subparsers.add_parser(
+        "nyov-promotion-review",
+        help="Export field-level NYOV promotion candidates for human review",
+    )
+    parser_nyov_promotion_review.add_argument("--db-path", type=Path, default=None)
+    parser_nyov_promotion_review.add_argument("--output-dir", type=Path, default=None)
 
     args = parser.parse_args()
 
@@ -526,6 +542,12 @@ def main():
         )
     elif args.command == "nyov-verification-summary":
         nyov_verification_summary(
+            write_enabled=args.write,
+            db_path=args.db_path,
+            output_dir=args.output_dir,
+        )
+    elif args.command == "nyov-promotion-review":
+        nyov_promotion_review(
             write_enabled=args.write,
             db_path=args.db_path,
             output_dir=args.output_dir,

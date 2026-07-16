@@ -55,6 +55,20 @@ The write-enabled summary creates:
 - `data\exports\codex\nyov_verification_summary\summary.json`
 - `data\exports\codex\nyov_verification_summary\entity_summary.csv`
 
+Promotion review command:
+
+```powershell
+python scripts\musicdb.py nyov-promotion-review
+python scripts\musicdb.py --write nyov-promotion-review
+```
+
+The write-enabled review creates:
+
+- `data\exports\codex\nyov_promotion_review\promotion_review_candidates.csv`
+
+This is a review file only. It does not promote data into official MusicDB
+tables.
+
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`

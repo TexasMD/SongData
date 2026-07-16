@@ -9,6 +9,7 @@ from src.commands.nyov_report import build_report
 from src.commands import verify_nyov_batch
 from src.commands.verify_nyov_batch import ProviderResult
 from src.commands.nyov_verification_summary import build_summary
+from src.commands.nyov_promotion_review import build_promotion_review
 
 
 def write_csv(path: Path, headers: list[str], rows: list[list[str]]) -> None:
@@ -418,3 +419,208 @@ def test_nyov_verification_summary_buckets_attempts(tmp_path):
     assert buckets["conflict_album_only"] == 1
     assert buckets["conflict_identity"] == 1
     assert buckets["insufficient_match"] == 1
+
+
+def test_nyov_promotion_review_exports_field_level_candidates(tmp_path):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(
+        seed,
+        ["Title", "Artist", "Album"],
+        [["Electric Avenue", "Eddy Grant", "Killer On The Rampage"]],
+    )
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+
+    with sqlite3.connect(db_path) as conn:
+        nyov_id = conn.execute("SELECT nyov_id FROM nyov_entities").fetchone()[0]
+        conn.executemany(
+            """
+            INSERT INTO nyov_verification_attempts
+            (attempt_id, nyov_id, provider, provider_entity_type, provider_entity_id, provider_url,
+             query_title, query_artist, query_album, queried_at, result_json, match_status,
+             match_score, title_match_status, artist_match_status, album_match_status,
+             duration_match_status, isrc_match_status, verifier, verifier_version, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    "a1",
+                    nyov_id,
+                    "iTunes",
+                    "track",
+                    "it-1",
+                    "https://itunes.example/it-1",
+                    "Electric Avenue",
+                    "Eddy Grant",
+                    "Killer On The Rampage",
+                    "2026-07-16T00:00:00Z",
+                    '{"trackId": "it-1"}',
+                    "matched",
+                    1.0,
+                    "exact",
+                    "exact",
+                    "exact",
+                    "not_checked",
+                    "not_checked",
+                    "test",
+                    "test",
+                    "",
+                ),
+                (
+                    "a2",
+                    nyov_id,
+                    "MusicBrainz",
+                    "recording",
+                    "mb-1",
+                    "https://musicbrainz.example/mb-1",
+                    "Electric Avenue",
+                    "Eddy Grant",
+                    "Killer On The Rampage",
+                    "2026-07-16T00:00:00Z",
+                    '{"id": "mb-1"}',
+                    "matched",
+                    0.95,
+                    "exact",
+                    "exact",
+                    "exact",
+                    "not_checked",
+                    "not_checked",
+                    "test",
+                    "test",
+                    "",
+                ),
+                (
+                    "a3",
+                    nyov_id,
+                    "iTunes",
+                    "track",
+                    "it-1",
+                    "https://itunes.example/it-1",
+                    "Electric Avenue",
+                    "Eddy Grant",
+                    "Killer On The Rampage",
+                    "2026-07-16T00:00:00Z",
+                    '{"trackId": "it-1"}',
+                    "matched",
+                    1.0,
+                    "exact",
+                    "exact",
+                    "exact",
+                    "not_checked",
+                    "not_checked",
+                    "test",
+                    "test",
+                    "",
+                ),
+                (
+                    "a4",
+                    nyov_id,
+                    "iTunes",
+                    "track",
+                    "it-2",
+                    "https://itunes.example/it-2",
+                    "Electric Avenue",
+                    "Eddy Grant",
+                    "Killer On The Rampage",
+                    "2026-07-16T00:00:00Z",
+                    '{"trackId": "it-2"}',
+                    "matched",
+                    0.9,
+                    "exact",
+                    "exact",
+                    "exact",
+                    "not_checked",
+                    "not_checked",
+                    "test",
+                    "test",
+                    "",
+                ),
+            ],
+        )
+
+    rows = build_promotion_review(db_path)
+    fields = {(row["target_field"], row["proposed_value"]) for row in rows}
+
+    assert ("title", "Electric Avenue") in fields
+    assert ("artist", "Eddy Grant") in fields
+    assert ("album", "Killer On The Rampage") in fields
+    assert ("itunes_track_id", "it-1") in fields
+    assert ("itunes_track_id", "it-2") not in fields
+    assert ("musicbrainz_recording_id", "mb-1") in fields
+    assert sum(1 for row in rows if row["target_field"] == "itunes_track_id") == 1
+    assert all(row["review_decision"] == "" for row in rows)
+
+
+def test_nyov_promotion_review_withholds_conflicted_album(tmp_path):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(seed, ["Title", "Artist", "Album"], [["Song B", "Artist B", "Album B"]])
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+
+    with sqlite3.connect(db_path) as conn:
+        nyov_id = conn.execute("SELECT nyov_id FROM nyov_entities").fetchone()[0]
+        conn.executemany(
+            """
+            INSERT INTO nyov_verification_attempts
+            (attempt_id, nyov_id, provider, provider_entity_type, provider_entity_id, provider_url,
+             query_title, query_artist, query_album, queried_at, result_json, match_status,
+             match_score, title_match_status, artist_match_status, album_match_status,
+             duration_match_status, isrc_match_status, verifier, verifier_version, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    "b1",
+                    nyov_id,
+                    "iTunes",
+                    "track",
+                    "it-b",
+                    "https://itunes.example/it-b",
+                    "Song B",
+                    "Artist B",
+                    "Different Album",
+                    "2026-07-16T00:00:00Z",
+                    '{"trackId": "it-b"}',
+                    "matched",
+                    0.9,
+                    "exact",
+                    "exact",
+                    "different",
+                    "not_checked",
+                    "not_checked",
+                    "test",
+                    "test",
+                    "",
+                ),
+                (
+                    "b2",
+                    nyov_id,
+                    "MusicBrainz",
+                    "recording",
+                    "mb-b",
+                    "https://musicbrainz.example/mb-b",
+                    "Song B",
+                    "Artist B",
+                    "Album B",
+                    "2026-07-16T00:00:00Z",
+                    '{"id": "mb-b"}',
+                    "matched",
+                    1.0,
+                    "exact",
+                    "exact",
+                    "exact",
+                    "not_checked",
+                    "not_checked",
+                    "test",
+                    "test",
+                    "",
+                ),
+            ],
+        )
+
+    rows = build_promotion_review(db_path)
+    fields = {row["target_field"] for row in rows}
+    assert "album" not in fields
+    assert {"title", "artist", "itunes_track_id", "musicbrainz_recording_id"} <= fields
