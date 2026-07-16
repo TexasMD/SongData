@@ -16,6 +16,7 @@ from src.utils import backup_file, read_csv
 from src.commands import build_reference_db as reference_db_command
 from src.commands import metadata_audit as metadata_audit_command
 from src.commands import build_nyov_db as nyov_db_command
+from src.commands import nyov_report as nyov_report_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -313,6 +314,16 @@ def build_nyov_db(write_enabled=False, seed_csv=None, basket_dir=None, output_db
     )
 
 
+def nyov_report(write_enabled=False, db_path=None, output_dir=None, queue_limit=250):
+    nyov_report_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        db_path=db_path,
+        output_dir=output_dir,
+        queue_limit=queue_limit,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -381,6 +392,13 @@ def main():
     parser_nyov.add_argument("--seed-csv", type=Path, default=None)
     parser_nyov.add_argument("--basket-dir", type=Path, default=None)
     parser_nyov.add_argument("--output-db", type=Path, default=None)
+    parser_nyov_report = subparsers.add_parser(
+        "nyov-report",
+        help="Summarize the not-yet-officially-verified evidence database",
+    )
+    parser_nyov_report.add_argument("--db-path", type=Path, default=None)
+    parser_nyov_report.add_argument("--output-dir", type=Path, default=None)
+    parser_nyov_report.add_argument("--queue-limit", type=int, default=250)
 
     args = parser.parse_args()
 
@@ -427,6 +445,13 @@ def main():
             seed_csv=args.seed_csv,
             basket_dir=args.basket_dir,
             output_db=args.output_db,
+        )
+    elif args.command == "nyov-report":
+        nyov_report(
+            write_enabled=args.write,
+            db_path=args.db_path,
+            output_dir=args.output_dir,
+            queue_limit=args.queue_limit,
         )
 
 

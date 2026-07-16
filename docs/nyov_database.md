@@ -18,6 +18,18 @@ Build command:
 python scripts\musicdb.py --write build-nyov-db
 ```
 
+Report command:
+
+```powershell
+python scripts\musicdb.py nyov-report
+python scripts\musicdb.py --write nyov-report
+```
+
+The write-enabled report creates:
+
+- `data\exports\codex\nyov_report\summary.json`
+- `data\exports\codex\nyov_report\verification_queue.csv`
+
 The first build inventories local basket evidence only. It imports CSV, TXT,
 XLSX, DOCX, and ZIP-contained CSV/TXT files into these tables:
 
@@ -38,3 +50,14 @@ Verification policy:
   provider response evidence.
 - Ambiguous matches remain in `nyov_conflicts` until reviewed.
 - Promotion into official MusicDB tables should be a separate reviewed step.
+
+Verification queue buckets:
+
+- `candidate_dual_source_match`: local evidence already includes Spotify plus
+  MusicBrainz, iTunes, or YouTube Music identifiers.
+- `candidate_spotify_only`: local evidence includes Spotify identifiers only.
+- `candidate_non_spotify_identifier`: local evidence includes identifiers, but
+  not Spotify.
+- `candidate_local_evidence_only`: more than seed evidence exists, but no
+  recognized identifiers have been extracted.
+- `seed_only`: the song exists only as an NYOV seed row so far.

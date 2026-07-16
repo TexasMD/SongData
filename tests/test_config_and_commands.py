@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
-from src.commands import build_nyov_db, build_v2, quality_report
+from src.commands import build_nyov_db, build_v2, nyov_report, quality_report
 from src.config import paths
 
 
@@ -97,6 +97,13 @@ class TestConfigAndCommands(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         self.assertIn("build-nyov-db: dry-run=True", output.getvalue())
+
+    def test_nyov_report_missing_db_returns_error(self):
+        root = make_temp_root()
+        configured = paths(root)
+
+        with self.assertRaises(FileNotFoundError):
+            nyov_report.build_report(configured.nyov_db_path)
 
 
 if __name__ == "__main__":
