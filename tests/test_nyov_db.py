@@ -8,6 +8,7 @@ from src.nyov_db import build_nyov_db
 from src.commands.nyov_report import build_report
 from src.commands import verify_nyov_batch
 from src.commands.verify_nyov_batch import ProviderResult
+from src.commands.nyov_verification_summary import build_summary
 
 
 def write_csv(path: Path, headers: list[str], rows: list[list[str]]) -> None:
@@ -196,3 +197,137 @@ def test_verify_nyov_batch_inserts_provider_attempts(tmp_path, monkeypatch):
             "SELECT provider, provider_entity_id, match_status, title_match_status FROM nyov_verification_attempts"
         ).fetchone()
     assert row == ("iTunes", "it-1", "matched", "exact")
+
+
+def test_nyov_verification_summary_buckets_attempts(tmp_path):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(
+        seed,
+        ["Title", "Artist", "Album"],
+        [
+            ["Electric Avenue", "Eddy Grant", "Killer On The Rampage"],
+            ["Song B", "Artist B", "Album B"],
+            ["Song C", "Artist C", "Album C"],
+        ],
+    )
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+
+    with sqlite3.connect(db_path) as conn:
+        ids = {
+            row[1]: row[0]
+            for row in conn.execute("SELECT nyov_id, seed_title FROM nyov_entities").fetchall()
+        }
+        rows = [
+            (
+                "a1",
+                ids["Electric Avenue"],
+                "iTunes",
+                "track",
+                "it-1",
+                "https://itunes.example/it-1",
+                "Electric Avenue",
+                "Eddy Grant",
+                "Killer On The Rampage",
+                "2026-07-16T00:00:00Z",
+                "{}",
+                "matched",
+                1.0,
+                "exact",
+                "exact",
+                "exact",
+                "not_checked",
+                "not_checked",
+                "test",
+                "test",
+                "",
+            ),
+            (
+                "a2",
+                ids["Electric Avenue"],
+                "MusicBrainz",
+                "recording",
+                "mb-1",
+                "https://musicbrainz.example/mb-1",
+                "Electric Avenue",
+                "Eddy Grant",
+                "Killer On The Rampage",
+                "2026-07-16T00:00:00Z",
+                "{}",
+                "matched",
+                0.95,
+                "exact",
+                "exact",
+                "exact",
+                "not_checked",
+                "not_checked",
+                "test",
+                "test",
+                "",
+            ),
+            (
+                "b1",
+                ids["Song B"],
+                "iTunes",
+                "track",
+                "it-b",
+                "https://itunes.example/it-b",
+                "Song B",
+                "Artist B",
+                "Different Album",
+                "2026-07-16T00:00:00Z",
+                "{}",
+                "matched",
+                0.9,
+                "exact",
+                "exact",
+                "different",
+                "not_checked",
+                "not_checked",
+                "test",
+                "test",
+                "",
+            ),
+            (
+                "c1",
+                ids["Song C"],
+                "iTunes",
+                "track",
+                "it-c",
+                "https://itunes.example/it-c",
+                "Different Song",
+                "Artist C",
+                "Album C",
+                "2026-07-16T00:00:00Z",
+                "{}",
+                "rejected",
+                0.4,
+                "different",
+                "exact",
+                "exact",
+                "not_checked",
+                "not_checked",
+                "test",
+                "test",
+                "",
+            ),
+        ]
+        conn.executemany(
+            """
+            INSERT INTO nyov_verification_attempts
+            (attempt_id, nyov_id, provider, provider_entity_type, provider_entity_id, provider_url,
+             query_title, query_artist, query_album, queried_at, result_json, match_status,
+             match_score, title_match_status, artist_match_status, album_match_status,
+             duration_match_status, isrc_match_status, verifier, verifier_version, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+
+    summary = build_summary(db_path)
+
+    buckets = {row["review_bucket"]: row["entity_count"] for row in summary["review_bucket_counts"]}
+    assert buckets["review_candidate_strong_identity"] == 1
+    assert buckets["conflict_album_only"] == 1
+    assert buckets["conflict_identity"] == 1

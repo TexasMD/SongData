@@ -36,6 +36,18 @@ python scripts\musicdb.py --write verify-nyov-batch --batch-step candidate_dual_
 `verify-nyov-batch` records provider lookups in `nyov_verification_attempts`.
 It does not promote fields into official MusicDB tables.
 
+Verification summary command:
+
+```powershell
+python scripts\musicdb.py nyov-verification-summary
+python scripts\musicdb.py --write nyov-verification-summary
+```
+
+The write-enabled summary creates:
+
+- `data\exports\codex\nyov_verification_summary\summary.json`
+- `data\exports\codex\nyov_verification_summary\entity_summary.csv`
+
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`
