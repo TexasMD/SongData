@@ -29,6 +29,8 @@ def test_insert_and_view(db):
     cursor = conn.cursor()
     cursor.execute("SELECT title, artist, bpm, key FROM view_search")
     row = cursor.fetchone()
+    cursor.execute("SELECT title_search, artist_search, album, album_search FROM recordings")
+    search_row = cursor.fetchone()
     conn.close()
 
     assert row is not None
@@ -36,6 +38,7 @@ def test_insert_and_view(db):
     assert row[1] == "Test Artist"
     assert row[2] == 100.0
     assert row[3] == "Am"
+    assert search_row == ("test song", "test artist", "", "")
 
 @patch('src.sqlite_poc.DB_PATH', TEST_DB)
 def test_insert_records(db):

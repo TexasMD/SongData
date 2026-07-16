@@ -15,6 +15,8 @@ if str(root_dir) not in sys.path:
 
 from src.db_access import DEFAULT_DB_PATH, execute_query
 from src.cover_update_service import run_cover_update
+from src.config import paths as musicdb_paths
+from src.normalization import normalize_display_row
 from src.similarity_engine import find_similar_recordings
 from src.vibe_search import search_by_vibe
 
@@ -22,6 +24,9 @@ app = FastAPI(
     title="MusicDB API",
     description="Read-only SQLite API for the MusicDB Pro Console.",
 )
+
+MUSICDB_PATHS = musicdb_paths()
+DEFAULT_REFERENCE_DB_PATH = MUSICDB_PATHS.reference_db_path
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,9 +57,27 @@ class CoverUpdateRequest(BaseModel):
     recording_ids: list[str]
 
 
-def records_from_query(query: str, params: list[Any] | tuple[Any, ...] | None = None) -> list[dict[str, Any]]:
-    df = execute_query(query, params=params)
-    return json.loads(df.to_json(orient="records"))
+def records_from_query(
+    query: str,
+    params: list[Any] | tuple[Any, ...] | None = None,
+    *,
+    db_path=DEFAULT_DB_PATH,
+) -> list[dict[str, Any]]:
+    df = execute_query(query, params=params, db_path=db_path)
+    rows = json.loads(df.to_json(orient="records"))
+    return [normalize_display_row(row) for row in rows]
+
+
+def sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [normalize_display_row(record) for record in records]
+
+
+def _reference_db_ready() -> None:
+    if not DEFAULT_REFERENCE_DB_PATH.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=f"Reference database not found at {DEFAULT_REFERENCE_DB_PATH}. Build it first.",
+        )
 
 
 @app.get("/")
@@ -97,10 +120,100 @@ def get_recordings(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@app.get("/api/reference/sources")
+def get_reference_sources(
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict[str, list[dict[str, Any]]]:
+    _reference_db_ready()
+    query = """
+        SELECT source, kind, credential_required, credential_environment_variables, used_by, status, notes
+        FROM source_registry
+        ORDER BY source
+        LIMIT ? OFFSET ?
+    """
+    try:
+        return {"results": records_from_query(query, [limit, offset], db_path=DEFAULT_REFERENCE_DB_PATH)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/reference/matrix")
+def get_reference_matrix(
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict[str, list[dict[str, Any]]]:
+    _reference_db_ready()
+    query = """
+        SELECT source, primary_metadata, identifier_fields, best_match_keys, default_confidence, notes
+        FROM source_metadata_matrix
+        ORDER BY source
+        LIMIT ? OFFSET ?
+    """
+    try:
+        return {"results": records_from_query(query, [limit, offset], db_path=DEFAULT_REFERENCE_DB_PATH)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/reference/entities")
+def get_reference_entities(
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict[str, list[dict[str, Any]]]:
+    _reference_db_ready()
+    query = """
+        SELECT *
+        FROM reference_entities
+        ORDER BY entity_kind, display_name
+        LIMIT ? OFFSET ?
+    """
+    try:
+        return {"results": records_from_query(query, [limit, offset], db_path=DEFAULT_REFERENCE_DB_PATH)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/reference/identifiers")
+def get_reference_identifiers(
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict[str, list[dict[str, Any]]]:
+    _reference_db_ready()
+    query = """
+        SELECT entity_kind, entity_id, entity_label, source, field_name, field_value, value_kind, source_url, verified_status, notes
+        FROM reference_identifiers
+        ORDER BY source, entity_kind, entity_id, field_name
+        LIMIT ? OFFSET ?
+    """
+    try:
+        return {"results": records_from_query(query, [limit, offset], db_path=DEFAULT_REFERENCE_DB_PATH)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/reference/source-observations")
+def get_reference_source_observations(
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict[str, list[dict[str, Any]]]:
+    _reference_db_ready()
+    query = """
+        SELECT row_number, source_name, title, artist, album, field_name, field_value, value_kind, notes
+        FROM source_observations
+        ORDER BY source_name, row_number, field_name
+        LIMIT ? OFFSET ?
+    """
+    try:
+        return {"results": records_from_query(query, [limit, offset], db_path=DEFAULT_REFERENCE_DB_PATH)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @app.post("/api/vibe_search")
 def api_vibe_search(request: VibeRequest) -> dict[str, Any]:
     try:
-        sql, params = search_by_vibe(request.query)
+        sql, params = search_by_vibe(request.query, db_path=DEFAULT_DB_PATH)
         return {"sql": sql, "results": records_from_query(sql, params)}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -121,7 +234,7 @@ def api_similarity(
 ) -> dict[str, list[dict[str, Any]]]:
     try:
         results = find_similar_recordings(recording_id, str(DEFAULT_DB_PATH), limit=limit)
-        return {"results": results}
+        return {"results": sanitize_records(results)}
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
@@ -159,14 +272,14 @@ def api_covers(request: CoverRequest) -> dict[str, list[dict[str, Any]]]:
                 mood_tags,
                 playlists
             FROM recordings
-            WHERE LOWER(title) = LOWER(?)
-              AND COALESCE(artist, '') != COALESCE(?, '')
+            WHERE NORMALIZE_SEARCH_TEXT(title) = NORMALIZE_SEARCH_TEXT(?)
+              AND NORMALIZE_SEARCH_TEXT(COALESCE(artist, '')) != NORMALIZE_SEARCH_TEXT(COALESCE(?, ''))
             ORDER BY artist, album
             LIMIT 100
             """,
             [title, artist],
         )
-        return {"covers": covers}
+        return {"covers": sanitize_records(covers)}
     except HTTPException:
         raise
     except Exception as exc:
@@ -217,7 +330,7 @@ def api_commonalities(request: CommonalitiesRequest) -> dict[str, Any]:
     if bpms:
         shared["bpm_range"] = [min(bpms), max(bpms)]
 
-    return {"count": len(rows), "commonalities": shared, "records": rows}
+    return {"count": len(rows), "commonalities": shared, "records": sanitize_records(rows)}
 
 
 if __name__ == "__main__":

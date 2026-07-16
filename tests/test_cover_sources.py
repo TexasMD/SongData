@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from types import SimpleNamespace
+import csv
+import json
+import sys
 
 from bs4 import BeautifulSoup
 
@@ -22,6 +27,7 @@ class FakeResponse:
 def test_cover_info_client_exact_search_and_details(monkeypatch):
     client = CoverInfoClient()
     seen = []
+    assert client.session.trust_env is False
 
     def fake_get(url, params=None, timeout=None):
         seen.append(("get", url, params))
@@ -78,6 +84,49 @@ def test_cover_info_client_exact_search_and_details(monkeypatch):
         }
     ]
     assert [entry[0] for entry in seen] == ["get", "post"]
+
+
+def test_coverdata_batch_writer_logs_progress_and_heartbeat(tmp_path):
+    script_path = Path(__file__).resolve().parents[1] / "basket" / "coverdata_shs_ci.py"
+    spec = spec_from_file_location("coverdata_shs_ci", script_path)
+    module = module_from_spec(spec)
+    assert spec and spec.loader
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    output = tmp_path / "covers.csv"
+    log = tmp_path / "covers.log"
+    heartbeat = tmp_path / "covers.status.json"
+    rows = [
+        {
+            "performing_artist": "Cover Artist",
+            "title": "Song A",
+            "year": "",
+            "album": "",
+            "genre": "",
+            "original_artist": "Original Artist",
+            "original_song_title": "Song A",
+            "original_album": "",
+            "original_year": "",
+            "secondhandsongs_artist_id": "",
+            "secondhandsongs_title_id": "",
+            "secondhandsongs_performance_id": "",
+            "secondhandsongs_album_id": "",
+            "source": "test",
+            "queried_at_utc": "",
+            "source_url": "https://example.test/song-a",
+        }
+    ]
+
+    module.write_in_batches(rows, output, batch_size=1, log_path=log, heartbeat_path=heartbeat, source_count=1)
+
+    with output.open("r", encoding="utf-8-sig", newline="") as handle:
+        written = list(csv.DictReader(handle))
+    assert written[0]["performing_artist"] == "Cover Artist"
+    assert "Progress appended=1" in log.read_text(encoding="utf-8")
+    payload = json.loads(heartbeat.read_text(encoding="utf-8"))
+    assert payload["state"] == "running"
+    assert payload["appended"] == 1
 
 
 def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
@@ -139,6 +188,51 @@ def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
         }
     ]
     assert len(seen) >= 2
+
+
+def test_secondhandsongs_client_uses_api_key(monkeypatch):
+    monkeypatch.setenv("SECONDHANDSONGS_API_KEY", "test-shs-key")
+
+    client = SecondHandSongsClient()
+
+    assert client.session.headers["X-API-Key"] == "test-shs-key"
+
+
+def test_secondhandsongs_client_paginates_until_total_results(monkeypatch):
+    client = SecondHandSongsClient()
+    pages_seen = []
+
+    def fake_get(url, params=None, timeout=None):
+        page = params.get("page", 0)
+        pages_seen.append(page)
+        rows = [
+            {
+                "entityType": "performance",
+                "uri": f"https://secondhandsongs.com/performance/{page}-{index}",
+                "title": params["title"],
+                "performer": {"name": f"Artist {page}-{index}"},
+                "isOriginal": False,
+            }
+            for index in range(2)
+        ]
+        if page == 2:
+            rows = rows[:1]
+        return FakeResponse(
+            200,
+            {
+                "totalResults": 5,
+                "resultPage": rows,
+                "skippedResults": page * 2,
+            },
+            f"{url}?page={page}",
+        )
+
+    monkeypatch.setattr(client.session, "get", fake_get)
+
+    rows = client.search_performances("Blackbird", page_size=2, max_pages=10)
+
+    assert len(rows) == 5
+    assert pages_seen == [0, 1, 2]
 
 
 def test_whosampled_parser_handles_track_connections():

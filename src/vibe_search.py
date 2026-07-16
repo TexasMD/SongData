@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import re
+import sqlite3
+from pathlib import Path
 from typing import Any
+
+from src.normalization import normalize_search_text
 
 
 TEXT_COLUMNS = [
@@ -19,16 +23,37 @@ TEXT_COLUMNS = [
     "data_quality_notes",
 ]
 
+SEARCH_INDEX_COLUMNS = {"title", "artist", "album"}
+
 
 def _terms(query: str) -> list[str]:
+    query = normalize_search_text(query)
     return [
         term.lower()
-        for term in re.findall(r"[A-Za-z0-9']+", query)
+        for term in re.findall(r"[^\W_]+(?:'[^\W_]+)*", query, flags=re.UNICODE)
         if len(term) > 1
     ][:8]
 
 
-def build_vibe_query(vibe_query: str, limit: int = 100) -> tuple[str, list[Any]]:
+def _recordings_have_search_columns(db_path: str | Path) -> bool:
+    try:
+        with sqlite3.connect(db_path) as conn:
+            columns = {
+                row[1]
+                for row in conn.execute("PRAGMA table_info(recordings)").fetchall()
+            }
+    except sqlite3.Error:
+        return False
+
+    return {"title_search", "artist_search", "album_search"}.issubset(columns)
+
+
+def build_vibe_query(
+    vibe_query: str,
+    limit: int = 100,
+    *,
+    use_search_columns: bool = False,
+) -> tuple[str, list[Any]]:
     """
     Build a deterministic, read-only SQLite query for conversational search.
 
@@ -65,7 +90,14 @@ def build_vibe_query(vibe_query: str, limit: int = 100) -> tuple[str, list[Any]]
     predicates: list[str] = []
     params: list[Any] = []
     for term in terms:
-        per_term = [f"LOWER(COALESCE({column}, '')) LIKE ?" for column in TEXT_COLUMNS]
+        per_term = [
+            (
+                f"LOWER(COALESCE({column}_search, '')) LIKE ?"
+                if use_search_columns and column in SEARCH_INDEX_COLUMNS
+                else f"NORMALIZE_SEARCH_TEXT(COALESCE({column}, '')) LIKE ?"
+            )
+            for column in TEXT_COLUMNS
+        ]
         predicates.append("(" + " OR ".join(per_term) + ")")
         params.extend([f"%{term}%"] * len(TEXT_COLUMNS))
 
@@ -78,5 +110,11 @@ def build_vibe_query(vibe_query: str, limit: int = 100) -> tuple[str, list[Any]]
     return sql, params
 
 
-def search_by_vibe(vibe_query: str, limit: int = 100) -> tuple[str, list[Any]]:
-    return build_vibe_query(vibe_query, limit=limit)
+def search_by_vibe(
+    vibe_query: str,
+    limit: int = 100,
+    *,
+    db_path: str | Path | None = None,
+) -> tuple[str, list[Any]]:
+    use_search_columns = bool(db_path) and _recordings_have_search_columns(db_path)
+    return build_vibe_query(vibe_query, limit=limit, use_search_columns=use_search_columns)

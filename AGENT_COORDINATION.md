@@ -31,6 +31,16 @@ Antigravity and Jules should write reviewable outputs under `data\staging`, `dat
 - Preserve CSV exports even if a SQLite database is added later.
 - Keep generated search links separate from verified exact links.
 - Record sources and confidence for enriched metadata.
+- For YouTube Music Takeout imports, write a deduped staged export first and merge only exact title+artist playlist memberships into SongDB v2.
+
+## Unicode And Encoding Hygiene
+
+- Canonical storage must not surface percent-escaped text, mojibake, or invisible control noise in user-facing fields.
+- Any record that is read for display, export, API response, search query construction, or outbound transmission must be normalized first.
+- Preserve the raw source value separately when it matters for provenance or debugging, but never render raw garbage in the UI.
+- Search logic must normalize user input and account for mangled source text so broken encodings do not make records undiscoverable.
+- If a row cannot be repaired confidently, quarantine it from canonical UI paths and keep it out of search suggestions until reviewed.
+- Favor canonical display text plus normalized search keys over one-off per-feature cleanup.
 
 ## Current Review Artifacts
 
