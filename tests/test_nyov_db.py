@@ -1040,6 +1040,52 @@ def test_apply_data_patches_reports_already_applied(tmp_path):
     assert summary["backups"] == {}
 
 
+def test_apply_data_patches_appends_rows_once(tmp_path):
+    root = tmp_path
+    target_csv = root / "SongDB_v2" / "playlist_membership.csv"
+    target_csv.parent.mkdir()
+    write_csv(
+        target_csv,
+        ["Recording ID", "Song ID", "Playlist", "Source", "Notes"],
+        [["R1", "S1", "NRG", "Main_Song_Database.csv Playlists column", ""]],
+    )
+    patch_dir = root / "data" / "patches"
+    patch_dir.mkdir(parents=True)
+    write_csv(
+        patch_dir / "playlist_append.csv",
+        [
+            "patch_id",
+            "patch_action",
+            "target_file",
+            "Recording ID",
+            "Song ID",
+            "Playlist",
+            "Source",
+            "Notes",
+        ],
+        [[
+            "PLAYLIST-APPEND-1",
+            "append_row",
+            "SongDB_v2/playlist_membership.csv",
+            "R2",
+            "S2",
+            "#patio",
+            "YouTube Music Takeout",
+            "videoID=abc",
+        ]],
+    )
+
+    summary = apply_data_patches(root, patch_dir, root / "data" / "backups", write=True)
+    rerun = apply_data_patches(root, patch_dir, root / "data" / "backups", write=True)
+
+    with target_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert summary["applied_rows"] == 1
+    assert rows[-1]["Playlist"] == "#patio"
+    assert rerun["applied_rows"] == 0
+    assert rerun["already_applied_rows"] == 1
+
+
 def _read_title(path: Path) -> str:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         return next(csv.DictReader(handle))["Title"]

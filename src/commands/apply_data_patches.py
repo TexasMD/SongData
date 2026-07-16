@@ -23,6 +23,13 @@ REQUIRED_COLUMNS = {
 }
 
 
+APPEND_REQUIRED_COLUMNS = {
+    "patch_id",
+    "patch_action",
+    "target_file",
+}
+
+
 def _read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -55,7 +62,11 @@ def _manifest_paths(patch_dir: Path, patch_file: Path | None = None) -> list[Pat
 def _load_patch_rows(manifest: Path) -> list[dict[str, str]]:
     _, rows = _read_csv(manifest)
     if rows:
-        missing = REQUIRED_COLUMNS - set(rows[0].keys())
+        columns = set(rows[0].keys())
+        if rows[0].get("patch_action") == "append_row":
+            missing = APPEND_REQUIRED_COLUMNS - columns
+        else:
+            missing = REQUIRED_COLUMNS - columns
         if missing:
             raise ValueError(f"Data patch manifest missing columns: {manifest}: {', '.join(sorted(missing))}")
     for row in rows:
@@ -117,6 +128,17 @@ def apply_data_patches(
         if target not in target_cache:
             target_cache[target] = _read_csv(target)
         headers, target_rows = target_cache[target]
+
+        if patch_row.get("patch_action") == "append_row":
+            new_row = {header: patch_row.get(header, "") for header in headers}
+            if any(row == new_row for row in target_rows):
+                already_applied += 1
+                continue
+            if write:
+                target_rows.append(new_row)
+                changed_targets.add(target)
+            applied += 1
+            continue
 
         match_column = patch_row.get("match_column", "")
         target_column = patch_row.get("target_column", "")
