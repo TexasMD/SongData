@@ -196,12 +196,27 @@ Default local outputs:
 - `data\staging\codex\msd_secondhand\msd_shs_cliques.csv`
 - `data\staging\codex\msd_secondhand\msd_shs_performances.csv`
 - `data\staging\codex\msd_secondhand\msd_shs_connections.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_track_metadata.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_musicdb_matches.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_musicdb_connections.csv`
 - `data\staging\codex\msd_secondhand\msd_secondhand.sqlite`
 
 The subset stores MSD track IDs, MSD artist IDs, SHS work IDs, and SHS
 performance IDs. It does not by itself include full readable artist/title
 metadata for every track, so the next crosswalk should join those MSD track IDs
 to an MSD metadata source before promoting local MusicDB cover candidates.
+
+The importer enriches the subset when the MSD `track_metadata.db` additional
+file is present at:
+
+- `data\staging\external\million_song\track_metadata.db`
+
+The official metadata DB provides one million `songs` rows with `track_id`,
+`title`, `artist_name`, `release`, `year`, and related IDs. On the 2026-07-16
+run, the importer enriched all 18,196 SHS subset performances, found 482 exact
+normalized title/artist matches to local MusicDB recordings, and staged 63
+same-clique MusicDB connection candidates for review. These are candidates, not
+official relationship promotions.
 
 ### Last.fm Datasets / LFM-1b
 

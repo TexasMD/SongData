@@ -420,12 +420,13 @@ def apply_data_patches(write_enabled=False, patch_dir=None, patch_file=None, bac
     )
 
 
-def import_msd_secondhand(write_enabled=False, input_dir=None, output_dir=None):
+def import_msd_secondhand(write_enabled=False, input_dir=None, output_dir=None, track_metadata_db=None):
     import_msd_secondhand_command.run(
         write=write_enabled,
         paths=musicdb_paths(),
         input_dir=input_dir,
         output_dir=output_dir,
+        track_metadata_db=track_metadata_db,
     )
 
 
@@ -562,6 +563,7 @@ def main():
     )
     parser_import_msd_shs.add_argument("--input-dir", type=Path, default=None)
     parser_import_msd_shs.add_argument("--output-dir", type=Path, default=None)
+    parser_import_msd_shs.add_argument("--track-metadata-db", type=Path, default=None)
 
     args = parser.parse_args()
 
@@ -673,6 +675,7 @@ def main():
             write_enabled=args.write,
             input_dir=args.input_dir,
             output_dir=args.output_dir,
+            track_metadata_db=args.track_metadata_db,
         )
 
 

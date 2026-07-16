@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import Iterable
 
 from src.config import MusicDBPaths
+from src.normalization import normalize_search_text
 
 
 DEFAULT_INPUT_DIR = Path("data/staging/external/million_song_secondhand")
 DEFAULT_OUTPUT_DIR = Path("data/staging/codex/msd_secondhand")
+DEFAULT_TRACK_METADATA_DB = Path("data/staging/external/million_song/track_metadata.db")
 DATASET_URL = "http://millionsongdataset.com/secondhand/"
 SOURCE_NAME = "Million Song Dataset SecondHandSongs subset"
 
@@ -28,6 +30,22 @@ class MsdShsPerformance:
     shs_performance_id: str
     source_file: str
     source_line: int
+
+
+@dataclass(frozen=True)
+class MsdTrackMetadata:
+    msd_track_id: str
+    title: str
+    song_id: str
+    release: str
+    msd_artist_id: str
+    artist_mbid: str
+    artist_name: str
+    duration: str
+    year: str
+    track_7digitalid: str
+    shs_performance_id: str
+    shs_work_id: str
 
 
 def _clean(value: object) -> str:
@@ -113,6 +131,55 @@ def parse_input_dir(input_dir: Path) -> list[MsdShsPerformance]:
     return rows
 
 
+def _chunked(values: list[str], size: int = 900) -> Iterable[list[str]]:
+    for index in range(0, len(values), size):
+        yield values[index:index + size]
+
+
+def load_track_metadata(metadata_db: Path, track_ids: Iterable[str]) -> dict[str, MsdTrackMetadata]:
+    ids = sorted({track_id for track_id in track_ids if track_id})
+    if not metadata_db.exists():
+        raise FileNotFoundError(f"Missing MSD track metadata DB: {metadata_db}")
+
+    rows: dict[str, MsdTrackMetadata] = {}
+    with sqlite3.connect(metadata_db) as conn:
+        for chunk in _chunked(ids):
+            placeholders = ", ".join(["?"] * len(chunk))
+            query = f"""
+                SELECT
+                    track_id,
+                    title,
+                    song_id,
+                    release,
+                    artist_id,
+                    artist_mbid,
+                    artist_name,
+                    duration,
+                    year,
+                    track_7digitalid,
+                    shs_perf,
+                    shs_work
+                FROM songs
+                WHERE track_id IN ({placeholders})
+            """
+            for row in conn.execute(query, chunk):
+                rows[row[0]] = MsdTrackMetadata(
+                    msd_track_id=_clean(row[0]),
+                    title=_clean(row[1]),
+                    song_id=_clean(row[2]),
+                    release=_clean(row[3]),
+                    msd_artist_id=_clean(row[4]),
+                    artist_mbid=_clean(row[5]),
+                    artist_name=_clean(row[6]),
+                    duration=_clean(row[7]),
+                    year=_clean(row[8]),
+                    track_7digitalid=_clean(row[9]),
+                    shs_performance_id="" if not _is_known_id(_clean(row[10])) else _clean(row[10]),
+                    shs_work_id="" if not _is_known_id(_clean(row[11])) else _clean(row[11]),
+                )
+    return rows
+
+
 def clique_rows(performances: Iterable[MsdShsPerformance]) -> list[dict[str, object]]:
     grouped: dict[tuple[str, str], list[MsdShsPerformance]] = {}
     for row in performances:
@@ -173,6 +240,50 @@ def performance_rows(performances: Iterable[MsdShsPerformance]) -> list[dict[str
     return rows
 
 
+def metadata_rows(
+    performances: Iterable[MsdShsPerformance],
+    metadata: dict[str, MsdTrackMetadata],
+) -> list[dict[str, object]]:
+    rows = []
+    for row in performances:
+        item = metadata.get(row.msd_track_id)
+        if item is None:
+            continue
+        known_work_ids = [work_id for work_id in row.work_ids if _is_known_id(work_id)]
+        performance_id = row.shs_performance_id if _is_known_id(row.shs_performance_id) else item.shs_performance_id
+        rows.append(
+            {
+                "dataset_split": row.dataset_split,
+                "clique_id": row.clique_id,
+                "clique_title": row.clique_title,
+                "msd_track_id": item.msd_track_id,
+                "msd_song_id": item.song_id,
+                "title": item.title,
+                "artist_name": item.artist_name,
+                "release": item.release,
+                "year": item.year,
+                "duration": item.duration,
+                "msd_artist_id": item.msd_artist_id,
+                "artist_mbid": item.artist_mbid,
+                "track_7digitalid": item.track_7digitalid,
+                "shs_performance_id": performance_id,
+                "shs_performance_url": (
+                    f"https://secondhandsongs.com/performance/{performance_id}"
+                    if performance_id
+                    else ""
+                ),
+                "shs_work_ids": ";".join(row.work_ids),
+                "shs_work_urls": ";".join(
+                    f"https://secondhandsongs.com/work/{work_id}"
+                    for work_id in known_work_ids
+                ),
+                "source": SOURCE_NAME,
+                "source_url": DATASET_URL,
+            }
+        )
+    return rows
+
+
 def connection_rows(performances: Iterable[MsdShsPerformance]) -> list[dict[str, object]]:
     grouped: dict[tuple[str, str], list[MsdShsPerformance]] = {}
     for row in performances:
@@ -200,22 +311,128 @@ def connection_rows(performances: Iterable[MsdShsPerformance]) -> list[dict[str,
     return rows
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+def _read_musicdb_recordings(recordings_csv: Path) -> list[dict[str, str]]:
+    if not recordings_csv.exists():
+        return []
+    with recordings_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _recording_match_key(row: dict[str, str]) -> tuple[str, str]:
+    return (
+        normalize_search_text(row.get("Canonical Title") or row.get("Title") or ""),
+        normalize_search_text(row.get("Artist") or ""),
+    )
+
+
+def _metadata_match_key(row: dict[str, object]) -> tuple[str, str]:
+    return (
+        normalize_search_text(str(row.get("title") or "")),
+        normalize_search_text(str(row.get("artist_name") or "")),
+    )
+
+
+def musicdb_match_rows(
+    enriched_rows: list[dict[str, object]],
+    recordings_csv: Path,
+) -> list[dict[str, object]]:
+    recordings = _read_musicdb_recordings(recordings_csv)
+    by_key: dict[tuple[str, str], list[dict[str, str]]] = {}
+    for recording in recordings:
+        key = _recording_match_key(recording)
+        if all(key):
+            by_key.setdefault(key, []).append(recording)
+
+    rows = []
+    for item in enriched_rows:
+        key = _metadata_match_key(item)
+        if not all(key):
+            continue
+        matches = by_key.get(key, [])
+        if not matches:
+            continue
+        match_confidence = "exact_normalized_title_artist"
+        if len(matches) > 1:
+            match_confidence = "ambiguous_exact_normalized_title_artist"
+        for match in matches:
+            rows.append(
+                {
+                    "recording_id": match.get("Recording ID", ""),
+                    "song_id": match.get("Song ID", ""),
+                    "musicdb_title": match.get("Title", ""),
+                    "musicdb_artist": match.get("Artist", ""),
+                    "msd_track_id": item.get("msd_track_id", ""),
+                    "msd_title": item.get("title", ""),
+                    "msd_artist": item.get("artist_name", ""),
+                    "clique_id": item.get("clique_id", ""),
+                    "clique_title": item.get("clique_title", ""),
+                    "shs_performance_id": item.get("shs_performance_id", ""),
+                    "shs_performance_url": item.get("shs_performance_url", ""),
+                    "shs_work_ids": item.get("shs_work_ids", ""),
+                    "match_confidence": match_confidence,
+                    "source": SOURCE_NAME,
+                }
+            )
+    return rows
+
+
+def musicdb_connection_rows(match_rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for row in match_rows:
+        clique_id = str(row.get("clique_id") or "")
+        if clique_id:
+            grouped.setdefault(clique_id, []).append(row)
+
+    rows = []
+    seen: set[tuple[str, str, str]] = set()
+    for clique_id, items in sorted(grouped.items()):
+        for left, right in itertools.combinations(items, 2):
+            left_id = str(left.get("recording_id") or "")
+            right_id = str(right.get("recording_id") or "")
+            if not left_id or not right_id or left_id == right_id:
+                continue
+            ordered = tuple(sorted([left_id, right_id]))
+            key = (clique_id, ordered[0], ordered[1])
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(
+                {
+                    "clique_id": clique_id,
+                    "clique_title": left.get("clique_title", ""),
+                    "left_recording_id": ordered[0],
+                    "right_recording_id": ordered[1],
+                    "relationship_type": "same_shs_work_clique",
+                    "confidence": "candidate_exact_title_artist_crosswalk",
+                    "source": SOURCE_NAME,
+                }
+            )
+    return rows
+
+
+def _write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str] | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = list(rows[0].keys()) if rows else []
+    fieldnames = fieldnames or (list(rows[0].keys()) if rows else [])
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
 
-def _replace_table(conn: sqlite3.Connection, table: str, rows: list[dict[str, object]]) -> None:
+def _replace_table(
+    conn: sqlite3.Connection,
+    table: str,
+    rows: list[dict[str, object]],
+    columns: list[str] | None = None,
+) -> None:
     conn.execute(f"DROP TABLE IF EXISTS {table}")
-    if not rows:
+    columns = columns or (list(rows[0].keys()) if rows else [])
+    if not columns:
         return
-    columns = list(rows[0].keys())
     column_sql = ", ".join(f"{column} TEXT" for column in columns)
     conn.execute(f"CREATE TABLE {table} ({column_sql})")
+    if not rows:
+        return
     placeholders = ", ".join(["?"] * len(columns))
     conn.executemany(
         f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})",
@@ -288,9 +505,91 @@ def write_outputs(performances: list[MsdShsPerformance], output_dir: Path) -> di
     return summary
 
 
-def build_import(input_dir: Path, output_dir: Path) -> dict[str, object]:
+def add_metadata_outputs(
+    summary: dict[str, object],
+    performances: list[MsdShsPerformance],
+    output_dir: Path,
+    metadata_db: Path,
+    recordings_csv: Path,
+) -> dict[str, object]:
+    metadata = load_track_metadata(metadata_db, [row.msd_track_id for row in performances])
+    enriched = metadata_rows(performances, metadata)
+    matches = musicdb_match_rows(enriched, recordings_csv)
+    musicdb_connections = musicdb_connection_rows(matches)
+
+    metadata_csv = output_dir / "msd_shs_track_metadata.csv"
+    matches_csv = output_dir / "msd_shs_musicdb_matches.csv"
+    musicdb_connections_csv = output_dir / "msd_shs_musicdb_connections.csv"
+    sqlite_path = Path(str(summary["outputs"]["sqlite"]))
+    match_columns = [
+        "recording_id",
+        "song_id",
+        "musicdb_title",
+        "musicdb_artist",
+        "msd_track_id",
+        "msd_title",
+        "msd_artist",
+        "clique_id",
+        "clique_title",
+        "shs_performance_id",
+        "shs_performance_url",
+        "shs_work_ids",
+        "match_confidence",
+        "source",
+    ]
+    musicdb_connection_columns = [
+        "clique_id",
+        "clique_title",
+        "left_recording_id",
+        "right_recording_id",
+        "relationship_type",
+        "confidence",
+        "source",
+    ]
+
+    _write_csv(metadata_csv, enriched)
+    _write_csv(matches_csv, matches, match_columns)
+    _write_csv(musicdb_connections_csv, musicdb_connections, musicdb_connection_columns)
+
+    with sqlite3.connect(sqlite_path) as conn:
+        _replace_table(conn, "msd_shs_track_metadata", enriched)
+        _replace_table(conn, "msd_shs_musicdb_matches", matches, match_columns)
+        _replace_table(conn, "msd_shs_musicdb_connections", musicdb_connections, musicdb_connection_columns)
+        conn.executescript(
+            """
+            CREATE INDEX IF NOT EXISTS idx_msd_shs_track_metadata_title_artist
+                ON msd_shs_track_metadata(title, artist_name);
+            CREATE INDEX IF NOT EXISTS idx_msd_shs_musicdb_matches_recording
+                ON msd_shs_musicdb_matches(recording_id);
+            CREATE INDEX IF NOT EXISTS idx_msd_shs_musicdb_matches_track
+                ON msd_shs_musicdb_matches(msd_track_id);
+            """
+        )
+        conn.commit()
+
+    summary["metadata_db"] = str(metadata_db)
+    summary["metadata_enriched_count"] = len(enriched)
+    summary["musicdb_match_count"] = len(matches)
+    summary["musicdb_connection_count"] = len(musicdb_connections)
+    summary["outputs"]["track_metadata_csv"] = str(metadata_csv)
+    summary["outputs"]["musicdb_matches_csv"] = str(matches_csv)
+    summary["outputs"]["musicdb_connections_csv"] = str(musicdb_connections_csv)
+    summary_path = output_dir / "summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    return summary
+
+
+def build_import(
+    input_dir: Path,
+    output_dir: Path,
+    metadata_db: Path | None = None,
+    recordings_csv: Path | None = None,
+) -> dict[str, object]:
     performances = parse_input_dir(input_dir)
-    return write_outputs(performances, output_dir)
+    summary = write_outputs(performances, output_dir)
+    if metadata_db is not None and recordings_csv is not None:
+        summary = add_metadata_outputs(summary, performances, output_dir, metadata_db, recordings_csv)
+    return summary
 
 
 def run(
@@ -299,17 +598,27 @@ def run(
     paths: MusicDBPaths,
     input_dir: Path | None = None,
     output_dir: Path | None = None,
+    track_metadata_db: Path | None = None,
 ) -> dict[str, object] | None:
     input_dir = input_dir or paths.root / DEFAULT_INPUT_DIR
     output_dir = output_dir or paths.root / DEFAULT_OUTPUT_DIR
+    track_metadata_db = track_metadata_db or paths.root / DEFAULT_TRACK_METADATA_DB
     if not write:
         print(f"dry-run: Would import MSD SHS files from {input_dir}")
         print(f"dry-run: Would write normalized outputs to {output_dir}")
+        print(f"dry-run: Would enrich from MSD track metadata DB at {track_metadata_db} if present")
         return None
 
-    summary = build_import(input_dir, output_dir)
+    metadata_db = track_metadata_db if track_metadata_db.exists() else None
+    summary = build_import(input_dir, output_dir, metadata_db, paths.recordings_csv if metadata_db else None)
     print(f"Imported {summary['performance_count']} MSD SHS performances")
     print(f"Grouped into {summary['clique_count']} SHS/MSD cliques")
     print(f"Wrote {summary['connection_count']} pairwise clique connections")
+    if metadata_db:
+        print(f"Enriched {summary['metadata_enriched_count']} MSD SHS performances with track metadata")
+        print(f"Matched {summary['musicdb_match_count']} rows to MusicDB recordings")
+        print(f"Wrote {summary['musicdb_connection_count']} MusicDB same-clique connection candidates")
+    else:
+        print(f"Skipped metadata enrichment; missing {track_metadata_db}")
     print(f"SQLite: {summary['outputs']['sqlite']}")
     return summary
