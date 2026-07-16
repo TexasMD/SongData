@@ -21,6 +21,7 @@ from src.commands import verify_nyov_batch as verify_nyov_batch_command
 from src.commands import nyov_verification_summary as nyov_verification_summary_command
 from src.commands import nyov_promotion_review as nyov_promotion_review_command
 from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
+from src.commands import export_nyov_official_patch as export_nyov_official_patch_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -386,6 +387,16 @@ def apply_nyov_promotions(write_enabled=False, db_path=None, review_csv=None, pr
     )
 
 
+def export_nyov_official_patch(write_enabled=False, db_path=None, official_csv=None, output_dir=None):
+    export_nyov_official_patch_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        db_path=db_path,
+        official_csv=official_csv,
+        output_dir=output_dir,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -492,6 +503,13 @@ def main():
     parser_apply_nyov_promotions.add_argument("--db-path", type=Path, default=None)
     parser_apply_nyov_promotions.add_argument("--input", type=Path, default=None)
     parser_apply_nyov_promotions.add_argument("--promoted-by", default="manual_review")
+    parser_export_nyov_patch = subparsers.add_parser(
+        "export-nyov-official-patch",
+        help="Export reviewable official-table patch candidates from approved NYOV promotions",
+    )
+    parser_export_nyov_patch.add_argument("--db-path", type=Path, default=None)
+    parser_export_nyov_patch.add_argument("--official-csv", type=Path, default=None)
+    parser_export_nyov_patch.add_argument("--output-dir", type=Path, default=None)
 
     args = parser.parse_args()
 
@@ -576,6 +594,13 @@ def main():
             db_path=args.db_path,
             review_csv=args.input,
             promoted_by=args.promoted_by,
+        )
+    elif args.command == "export-nyov-official-patch":
+        export_nyov_official_patch(
+            write_enabled=args.write,
+            db_path=args.db_path,
+            official_csv=args.official_csv,
+            output_dir=args.output_dir,
         )
 
 

@@ -11,6 +11,7 @@ from src.commands.verify_nyov_batch import ProviderResult
 from src.commands.nyov_verification_summary import build_summary
 from src.commands.nyov_promotion_review import build_promotion_review
 from src.commands.apply_nyov_promotions import apply_promotions
+from src.commands.export_nyov_official_patch import build_official_patch
 
 
 def write_csv(path: Path, headers: list[str], rows: list[list[str]]) -> None:
@@ -633,6 +634,8 @@ def test_apply_nyov_promotions_writes_only_approved_rows(tmp_path):
     write_csv(seed, ["Title", "Artist", "Album"], [["Electric Avenue", "Eddy Grant", "Killer On The Rampage"]])
     db_path = tmp_path / "nyov.sqlite"
     build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+    with sqlite3.connect(db_path) as conn:
+        nyov_id = conn.execute("SELECT nyov_id FROM nyov_entities").fetchone()[0]
 
     review_csv = tmp_path / "review.csv"
     write_csv(
@@ -658,13 +661,13 @@ def test_apply_nyov_promotions_writes_only_approved_rows(tmp_path):
         ],
         [
             [
-                "NYOV-1",
+                nyov_id,
                 "Electric Avenue",
                 "Eddy Grant",
                 "Killer On The Rampage",
                 "review_candidate_strong_identity",
                 "recordings",
-                "NYOV-1",
+                nyov_id,
                 "title",
                 "Electric Avenue",
                 "verified_strong",
@@ -730,3 +733,133 @@ def test_apply_nyov_promotions_writes_only_approved_rows(tmp_path):
             "SELECT target_field, promoted_value, verification_level, promoted_by, notes FROM nyov_promotions"
         ).fetchone()
     assert row == ("title", "Electric Avenue", "verified_strong", "tester", "looks good")
+
+
+def test_export_nyov_official_patch_builds_review_rows(tmp_path):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(seed, ["Title", "Artist", "Album"], [["Electric Avenue", "Eddy Grant", "Killer On The Rampage"]])
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+    with sqlite3.connect(db_path) as conn:
+        nyov_id = conn.execute("SELECT nyov_id FROM nyov_entities").fetchone()[0]
+
+    review_csv = tmp_path / "review.csv"
+    write_csv(
+        review_csv,
+        [
+            "nyov_id",
+            "seed_title",
+            "seed_artist",
+            "seed_album",
+            "review_bucket",
+            "target_table",
+            "target_key",
+            "target_field",
+            "proposed_value",
+            "verification_level",
+            "supporting_sources",
+            "conflicting_sources",
+            "best_provider",
+            "best_provider_entity_id",
+            "best_match_score",
+            "review_decision",
+            "review_notes",
+        ],
+        [
+            [
+                nyov_id,
+                "Electric Avenue",
+                "Eddy Grant",
+                "Killer On The Rampage",
+                "review_candidate_strong_identity",
+                "recordings",
+                nyov_id,
+                "title",
+                "Electric Avenue",
+                "verified_strong",
+                "iTunes:it-1 | MusicBrainz:mb-1",
+                "",
+                "iTunes",
+                "it-1",
+                "1.000",
+                "approve",
+                "looks good",
+            ]
+        ],
+    )
+    apply_promotions(db_path, review_csv, promoted_by="tester", write=True)
+    official_csv = tmp_path / "recordings.csv"
+    write_csv(
+        official_csv,
+        ["Recording ID", "Title", "Artist", "Album"],
+        [["R1", "Electric Avenue", "Eddy Grant", "Old Album"]],
+    )
+
+    rows = build_official_patch(db_path, official_csv)
+
+    assert len(rows) == 1
+    assert rows[0]["official_match_status"] == "matched_exact_title_artist"
+    assert rows[0]["target_column"] == "Title"
+    assert rows[0]["patch_action"] == "no_change"
+
+
+def test_export_nyov_official_patch_requires_manual_match_when_not_found(tmp_path):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(seed, ["Title", "Artist", "Album"], [["Electric Avenue", "Eddy Grant", "Killer On The Rampage"]])
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+
+    review_csv = tmp_path / "review.csv"
+    write_csv(
+        review_csv,
+        [
+            "nyov_id",
+            "seed_title",
+            "seed_artist",
+            "seed_album",
+            "review_bucket",
+            "target_table",
+            "target_key",
+            "target_field",
+            "proposed_value",
+            "verification_level",
+            "supporting_sources",
+            "conflicting_sources",
+            "best_provider",
+            "best_provider_entity_id",
+            "best_match_score",
+            "review_decision",
+            "review_notes",
+        ],
+        [
+            [
+                "NYOV-1",
+                "Electric Avenue",
+                "Eddy Grant",
+                "Killer On The Rampage",
+                "review_candidate_strong_identity",
+                "recordings",
+                "NYOV-1",
+                "artist",
+                "Eddy Grant",
+                "verified_strong",
+                "iTunes:it-1",
+                "",
+                "iTunes",
+                "it-1",
+                "1.000",
+                "approve",
+                "",
+            ]
+        ],
+    )
+    apply_promotions(db_path, review_csv, promoted_by="tester", write=True)
+    official_csv = tmp_path / "recordings.csv"
+    write_csv(official_csv, ["Recording ID", "Title", "Artist"], [["R1", "Other Song", "Other Artist"]])
+
+    rows = build_official_patch(db_path, official_csv)
+
+    assert rows[0]["official_match_status"] == "not_found"
+    assert rows[0]["patch_action"] == "manual_match_required"

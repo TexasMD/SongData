@@ -79,6 +79,21 @@ python scripts\musicdb.py --write apply-nyov-promotions --input data\exports\cod
 Only rows with `review_decision` set to `approve` are written into
 `nyov_promotions`. This still does not write to official MusicDB tables.
 
+Official patch export command:
+
+```powershell
+python scripts\musicdb.py export-nyov-official-patch
+python scripts\musicdb.py --write export-nyov-official-patch
+```
+
+The write-enabled patch export creates:
+
+- `data\exports\codex\nyov_official_patch\official_patch_candidates.csv`
+
+This is still a review file only. It compares approved NYOV promotions against
+the selected official CSV and flags exact matches, ambiguous matches, and rows
+that require manual matching.
+
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`
