@@ -14,6 +14,26 @@ The long-term target is a music system that can answer practical questions quick
 - Which version of this song is the original, the cover, the remix, or the live version?
 - Where are the best tabs, sample/covers data, and external references?
 
+## Product Goals
+
+Long-term user-facing goals for the project:
+
+1. Connect directly to user-approved playlists from Spotify, iTunes, Amazon Music, and YouTube Music.
+2. Import those playlists into the database as first-class library data.
+3. Link songs, artists, and albums to the user’s preferred media source platform when multiple sources exist.
+4. Create mood-based, goal-based, event-based, and situation-based playlists.
+5. Suggest music the user does not already have in their listening history.
+6. Find cover songs and related versions for music already in the database.
+7. Support creation of the user’s own versions or arrangements of songs they like.
+8. Provide links to lyrics and sheet music or tablature where available.
+9. Show simplified keyboard/playback guidance for songs.
+10. Show visual pitch or note representations for vocals so songs can be learned or performed more easily.
+11. Require double verification of song metadata using at least two reputable sources.
+12. Clean song metadata for font, symbol, and encoding problems.
+13. Retain reference IDs from every source for title, performance, artist, album, and other useful entities.
+14. Determine what metadata each primary source provides, including Spotify, iTunes, YouTube Music, cover.info, MusicBrainz, and Discogs.
+15. Maintain a cleaned, reliable reference-ID database that can be published as a web-reachable source of truth.
+
 ## Current State
 
 As of this plan:

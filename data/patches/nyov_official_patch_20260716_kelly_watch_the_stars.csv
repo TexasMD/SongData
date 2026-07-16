@@ -1,0 +1,2 @@
+patch_id,target_file,match_column,match_value,target_column,old_value,new_value,source_patch_file,approval_basis,local_backup_path,local_applied_at
+NYOV-OFFICIAL-20260716-0001,SongDB_v2/recordings.csv,Recording ID,R51C96C3D6F48,Title,Kelly Watch The Stars,Kelly Watch the Stars,data/exports/codex/nyov_official_patch/official_patch_candidates.csv,User approved NYOV official patch candidate with exact title/artist match,data/backups/nyov_official_patch/recordings_nyov_official_patch_20260716_032335.csv,2026-07-16

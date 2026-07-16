@@ -1,0 +1,35 @@
+
+Mode  Length LastWriteTime         Name
+----  ------ -------------         ----
+d----        7/7/2026 12:43:10 AM  .agents
+d----        7/10/2026 7:42:58 PM  .codex
+d----        7/15/2026 2:27:56 AM  .git
+d----        7/7/2026 12:43:10 AM  .github
+d----        7/10/2026 12:52:50 PM .pytest_cache
+d----        7/10/2026 1:02:51 PM  api
+d----        7/7/2026 12:43:11 AM  backups
+d----        7/14/2026 10:09:53 PM basket
+d----        7/13/2026 11:27:25 AM data
+d----        7/15/2026 2:27:56 AM  docs
+d----        7/7/2026 12:41:45 AM  frontend
+d----        7/7/2026 12:43:12 AM  playlists
+d----        7/12/2026 10:54:16 AM scripts
+d----        7/12/2026 10:14:54 AM SongDB_v2
+d----        7/13/2026 11:27:24 AM src
+d----        7/10/2026 11:12:50 AM stitch
+d----        7/13/2026 12:23:59 PM tests
+d----        7/13/2026 12:29:08 PM tmp
+-a--- 389    7/5/2026 10:59:18 PM  .env
+-a--- 206    7/7/2026 12:43:10 AM  .env.example
+-a--- 253    7/7/2026 12:43:11 AM  .gitignore
+-a--- 183    7/7/2026 12:43:11 AM  .pre-commit-config.yaml
+-a--- 2902   7/13/2026 12:23:26 PM AGENT_COORDINATION.md
+-a--- 3671   7/7/2026 12:41:44 AM  build_db.py
+-a--- 4423   7/7/2026 12:41:44 AM  CODE_REVIEW_SUGGESTIONS.md
+-a--- 1011   7/10/2026 9:18:24 PM  commit_message.txt
+-a--- 2807   7/5/2026 12:53:04 PM  conflict_resolution.md
+-a--- 4437   7/5/2026 12:53:04 PM  EXPLANATION_FOR_GITHUB_CONFLICTS.md
+-a--- 550    7/7/2026 12:36:26 AM  find_conflicts.ps1
+-a--- 2103   7/13/2026 11:21:02 AM plan.md
+-a--- 2501   7/13/2026 11:20:56 AM README.md
+-a--- 1911   7/10/2026 11:12:50 AM UI_DESIGN_GOALS.md

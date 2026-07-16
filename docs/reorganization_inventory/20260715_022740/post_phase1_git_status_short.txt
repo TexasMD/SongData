@@ -1,0 +1,62 @@
+## codex/reorganize-musicdb
+ M .github/ISSUE_TEMPLATE/agent-task.md
+ M .gitignore
+ M AGENT_COORDINATION.md
+ M README.md
+ M SongDB_v2/README.txt
+ M SongDB_v2/external_links.csv
+ M SongDB_v2/manifest.json
+ M SongDB_v2/playlist_membership.csv
+ M SongDB_v2/recordings.csv
+ M SongDB_v2/songs.csv
+ M api/main.py
+ M basket/coverdata_shs_ci.py
+ M data/processed/Main_Song_Database.csv
+ M data/source_registry.csv
+ M data/staging/jules/MusicDB.sqlite
+ M docs/WORKSTREAMS.md
+ M docs/agent_operating_model.md
+ M docs/github_coordination.md
+ M docs/proposed_improvement_plan.md
+ M plan.md
+ M scripts/build_songdb_v2.py
+ M scripts/musicdb.py
+ M src/config.py
+ M src/cover_info_client.py
+ M src/db_access.py
+ M src/normalization.py
+ M src/sqlite_poc.py
+ M src/vibe_search.py
+ M tests/test_cli.py
+ M tests/test_config_and_commands.py
+ M tests/test_db_access_and_vibe.py
+ M tests/test_quality.py
+ M tests/test_repo_safety.py
+?? "basket/needs clen.txt"
+?? basket/reverify_spotify.ps1
+?? basket/reverify_spotify.py
+?? basket/reverify_spotify_parallel.ps1
+?? basket/reverify_spotify_parallel.py
+?? basket/run_coverdata_from_spotify_reverified.ps1
+?? basket/watch_coverdata_status.ps1
+?? basket/whosampled_cover_extractor.py
+?? basket/whosampled_cover_extractor_instructions.md
+?? docs/reference_id_database.md
+?? docs/reorganization_implementation_plan.md
+?? docs/reorganization_inventory/
+?? find_conflicts.ps1
+?? pytest.ini
+?? scripts/cleanup_questionable_rows.py
+?? scripts/normalize_csv_documents.py
+?? scripts/verify_youtube_music_takeout.py
+?? src/commands/build_reference_db.py
+?? src/commands/metadata_audit.py
+?? src/reference_db.py
+?? src/youtube_music_takeout.py
+?? tests/test_api_display_normalization.py
+?? tests/test_display_normalization.py
+?? tests/test_metadata_audit.py
+?? tests/test_normalize_csv_documents.py
+?? tests/test_reference_db.py
+?? tests/test_verify_youtube_music_takeout.py
+?? tests/test_youtube_music_takeout.py

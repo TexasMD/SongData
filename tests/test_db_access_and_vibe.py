@@ -51,3 +51,70 @@ def test_is_safe_query_rejects_additional_unsafe_keywords():
     assert not is_safe_query("SELECT * FROM recordings; DETACH DATABASE ext")
     assert not is_safe_query("SELECT * FROM recordings; CREATE TABLE malicious (id INTEGER)")
     assert not is_safe_query("SELECT * FROM recordings; REPLACE INTO recordings VALUES ('1', 'bad')")
+
+
+def test_search_by_vibe_matches_percent_escaped_source_text(tmp_path):
+    db_path = tmp_path / "music.sqlite"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            CREATE TABLE recordings (
+                recording_id TEXT,
+                title TEXT,
+                artist TEXT,
+                album TEXT,
+                release_year INTEGER,
+                duration TEXT,
+                genre TEXT,
+                genre_detail TEXT,
+                bpm TEXT,
+                key TEXT,
+                mood_tags TEXT,
+                event_tags TEXT,
+                situation_tags TEXT,
+                setlist_role TEXT,
+                crowd_energy TEXT,
+                playlists TEXT,
+                data_quality_notes TEXT,
+                spotify_track_id TEXT,
+                musicbrainz_recording_id TEXT,
+                title_search TEXT,
+                artist_search TEXT,
+                album_search TEXT
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO recordings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "rec-1",
+                "R%C3%9CF%C3%9CS DU SOL - Underwater",
+                "R%C3%9CF%C3%9CS DU SOL",
+                "SOLACE",
+                2018,
+                "5:50",
+                "Electronic",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "rufus du sol underwater",
+                "rufus du sol",
+                "solace",
+            ),
+        )
+
+    sql, params = search_by_vibe("RÜFÜS Underwater", db_path=db_path)
+    assert "title_search" in sql
+    assert "artist_search" in sql
+    df = execute_query(sql, params, db_path=db_path)
+
+    assert df.to_dict("records")[0]["title"] == "R%C3%9CF%C3%9CS DU SOL - Underwater"
