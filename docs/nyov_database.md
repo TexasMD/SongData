@@ -94,6 +94,17 @@ This is still a review file only. It compares approved NYOV promotions against
 the selected official CSV and flags exact matches, ambiguous matches, and rows
 that require manual matching.
 
+Official patch apply command:
+
+```powershell
+python scripts\musicdb.py apply-nyov-official-patch
+python scripts\musicdb.py --write apply-nyov-official-patch
+```
+
+The apply command only applies rows with `patch_action=update_existing` and
+`official_match_status=matched_exact_title_artist`. It creates a timestamped
+backup before writing the selected official CSV.
+
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`

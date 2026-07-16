@@ -22,6 +22,7 @@ from src.commands import nyov_verification_summary as nyov_verification_summary_
 from src.commands import nyov_promotion_review as nyov_promotion_review_command
 from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
 from src.commands import export_nyov_official_patch as export_nyov_official_patch_command
+from src.commands import apply_nyov_official_patch as apply_nyov_official_patch_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -397,6 +398,16 @@ def export_nyov_official_patch(write_enabled=False, db_path=None, official_csv=N
     )
 
 
+def apply_nyov_official_patch(write_enabled=False, official_csv=None, patch_csv=None, backup_dir=None):
+    apply_nyov_official_patch_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        official_csv=official_csv,
+        patch_csv=patch_csv,
+        backup_dir=backup_dir,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -510,6 +521,13 @@ def main():
     parser_export_nyov_patch.add_argument("--db-path", type=Path, default=None)
     parser_export_nyov_patch.add_argument("--official-csv", type=Path, default=None)
     parser_export_nyov_patch.add_argument("--output-dir", type=Path, default=None)
+    parser_apply_nyov_patch = subparsers.add_parser(
+        "apply-nyov-official-patch",
+        help="Apply approved NYOV official patch rows to an official CSV with backup",
+    )
+    parser_apply_nyov_patch.add_argument("--official-csv", type=Path, default=None)
+    parser_apply_nyov_patch.add_argument("--patch-csv", type=Path, default=None)
+    parser_apply_nyov_patch.add_argument("--backup-dir", type=Path, default=None)
 
     args = parser.parse_args()
 
@@ -601,6 +619,13 @@ def main():
             db_path=args.db_path,
             official_csv=args.official_csv,
             output_dir=args.output_dir,
+        )
+    elif args.command == "apply-nyov-official-patch":
+        apply_nyov_official_patch(
+            write_enabled=args.write,
+            official_csv=args.official_csv,
+            patch_csv=args.patch_csv,
+            backup_dir=args.backup_dir,
         )
 
 
