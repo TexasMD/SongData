@@ -23,12 +23,14 @@ Report command:
 ```powershell
 python scripts\musicdb.py nyov-report
 python scripts\musicdb.py --write nyov-report
+python scripts\musicdb.py --write nyov-report --batch-step candidate_dual_source_match --batch-limit 100
 ```
 
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`
 - `data\exports\codex\nyov_report\verification_queue.csv`
+- `data\exports\codex\nyov_report\verification_batch_candidate_dual_source_match.csv`
 
 The first build inventories local basket evidence only. It imports CSV, TXT,
 XLSX, DOCX, and ZIP-contained CSV/TXT files into these tables:

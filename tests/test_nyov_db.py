@@ -86,3 +86,5 @@ def test_nyov_report_classifies_verification_candidates(tmp_path):
     assert buckets["seed_only"] == 1
     assert report["verification_queue"][0]["seed_title"] == "Electric Avenue"
     assert report["verification_queue"][0]["next_step"] == "candidate_dual_source_match"
+    assert len(report["verification_batch"]) == 1
+    assert report["verification_batch"][0]["seed_title"] == "Electric Avenue"

@@ -100,7 +100,23 @@ def _fetch_verification_queue(conn: sqlite3.Connection, limit: int) -> list[dict
     return [dict(row) for row in rows]
 
 
-def build_report(db_path: Path, *, queue_limit: int = 250) -> dict[str, Any]:
+def _fetch_verification_batch(
+    conn: sqlite3.Connection,
+    *,
+    batch_step: str,
+    batch_limit: int,
+) -> list[dict[str, Any]]:
+    queue = _fetch_verification_queue(conn, 100_000)
+    return [row for row in queue if row["next_step"] == batch_step][:batch_limit]
+
+
+def build_report(
+    db_path: Path,
+    *,
+    queue_limit: int = 250,
+    batch_step: str = "candidate_dual_source_match",
+    batch_limit: int = 100,
+) -> dict[str, Any]:
     if not db_path.exists():
         raise FileNotFoundError(f"NYOV database not found: {db_path}")
 
@@ -185,6 +201,7 @@ def build_report(db_path: Path, *, queue_limit: int = 250) -> dict[str, Any]:
             """,
         )
         queue = _fetch_verification_queue(conn, queue_limit)
+        batch = _fetch_verification_batch(conn, batch_step=batch_step, batch_limit=batch_limit)
 
     return {
         "database": str(db_path),
@@ -196,6 +213,9 @@ def build_report(db_path: Path, *, queue_limit: int = 250) -> dict[str, Any]:
         "top_source_files": source_file_counts,
         "next_step_counts": next_step_counts,
         "verification_queue": queue,
+        "verification_batch": batch,
+        "verification_batch_step": batch_step,
+        "verification_batch_limit": batch_limit,
     }
 
 
@@ -215,10 +235,17 @@ def run(
     db_path: Path | None = None,
     output_dir: Path | None = None,
     queue_limit: int = 250,
+    batch_step: str = "candidate_dual_source_match",
+    batch_limit: int = 100,
 ) -> int:
     db_path = (db_path or paths.nyov_db_path).resolve()
     output_dir = (output_dir or paths.exports_dir / "codex" / "nyov_report").resolve()
-    report = build_report(db_path, queue_limit=queue_limit)
+    report = build_report(
+        db_path,
+        queue_limit=queue_limit,
+        batch_step=batch_step,
+        batch_limit=batch_limit,
+    )
 
     print("nyov-report: dry-run=" + str(not write))
     print(f"Input DB: {db_path}")
@@ -226,20 +253,35 @@ def run(
     print(f"Matched seed entities: {report['matched_seed_entities']}")
     print(f"Source observations: {report['counts']['nyov_source_observations']}")
     print(f"Identifiers: {report['counts']['nyov_identifiers']}")
+    print(f"Verification batch step: {report['verification_batch_step']}")
+    print(f"Verification batch rows: {len(report['verification_batch'])}")
     print("Next-step buckets:")
     for row in report["next_step_counts"]:
         print(f"  {row['next_step']}: {row['entity_count']}")
 
     summary_path = output_dir / "summary.json"
     queue_path = output_dir / "verification_queue.csv"
+    batch_path = output_dir / f"verification_batch_{batch_step}.csv"
     if write:
         output_dir.mkdir(parents=True, exist_ok=True)
         with summary_path.open("w", encoding="utf-8") as handle:
-            json.dump({key: value for key, value in report.items() if key != "verification_queue"}, handle, indent=2, ensure_ascii=False)
+            json.dump(
+                {
+                    key: value
+                    for key, value in report.items()
+                    if key not in {"verification_queue", "verification_batch"}
+                },
+                handle,
+                indent=2,
+                ensure_ascii=False,
+            )
         _write_csv(queue_path, report["verification_queue"])
+        _write_csv(batch_path, report["verification_batch"])
         print(f"Wrote summary to {summary_path}")
         print(f"Wrote verification queue to {queue_path}")
+        print(f"Wrote verification batch to {batch_path}")
     else:
         print(f"DRY RUN: Would write summary to {summary_path}")
         print(f"DRY RUN: Would write verification queue to {queue_path}")
+        print(f"DRY RUN: Would write verification batch to {batch_path}")
     return 0

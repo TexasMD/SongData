@@ -314,13 +314,22 @@ def build_nyov_db(write_enabled=False, seed_csv=None, basket_dir=None, output_db
     )
 
 
-def nyov_report(write_enabled=False, db_path=None, output_dir=None, queue_limit=250):
+def nyov_report(
+    write_enabled=False,
+    db_path=None,
+    output_dir=None,
+    queue_limit=250,
+    batch_step="candidate_dual_source_match",
+    batch_limit=100,
+):
     nyov_report_command.run(
         write=write_enabled,
         paths=musicdb_paths(),
         db_path=db_path,
         output_dir=output_dir,
         queue_limit=queue_limit,
+        batch_step=batch_step,
+        batch_limit=batch_limit,
     )
 
 
@@ -399,6 +408,8 @@ def main():
     parser_nyov_report.add_argument("--db-path", type=Path, default=None)
     parser_nyov_report.add_argument("--output-dir", type=Path, default=None)
     parser_nyov_report.add_argument("--queue-limit", type=int, default=250)
+    parser_nyov_report.add_argument("--batch-step", default="candidate_dual_source_match")
+    parser_nyov_report.add_argument("--batch-limit", type=int, default=100)
 
     args = parser.parse_args()
 
@@ -452,6 +463,8 @@ def main():
             db_path=args.db_path,
             output_dir=args.output_dir,
             queue_limit=args.queue_limit,
+            batch_step=args.batch_step,
+            batch_limit=args.batch_limit,
         )
 
 
