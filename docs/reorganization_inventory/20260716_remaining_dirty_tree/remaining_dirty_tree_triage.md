@@ -23,6 +23,15 @@ This report separates the local generated/database changes that remain after the
 - `data/patches/songs_scalar_cleanup_20260716.csv`: 33 field updates across 33 existing rows in `SongDB_v2/songs.csv`.
   Field counts: `Canonical Title`=13, `Canonical Artist`=12, `Preferred Primary Release`=6, `Genre Family`=2.
   Skipped 0 update already represented by an existing patch manifest and 1 ID-churn update.
+- `data/patches/recordings_ambiguity_warnings_20260716.csv`: 34 warning updates to `Data Quality Notes` for affected recording rows.
+- `data/patches/songs_ambiguity_warnings_20260716.csv`: 33 warning updates to `Notes` for affected song rows.
+
+## Ambiguity policy note
+
+The scalar cleanup examples are treated as ambiguous/unofficial or cover-song
+release cleanup, not as source-verified identity metadata. The warning patches
+flag those rows so downstream review can use the normalized text while still
+seeing that the release identity remains questionable.
 
 ## Recommendation
 
