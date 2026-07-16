@@ -68,6 +68,47 @@ Minimum promotion evidence:
 - raw response or raw row snapshot
 - match decision and reviewer or automation version
 
+## Verification Attempt Schema
+
+Each `nyov_verification_attempts` row should capture the provider lookup used
+to judge one NYOV entity:
+
+- `attempt_id`
+- `nyov_id`
+- `provider`
+- `provider_entity_type`
+- `provider_entity_id`
+- `provider_url`
+- `query_title`
+- `query_artist`
+- `query_album`
+- `queried_at`
+- `result_json`
+- `match_status`
+- `match_score`
+- `title_match_status`
+- `artist_match_status`
+- `album_match_status`
+- `duration_match_status`
+- `isrc_match_status`
+- `verifier`
+- `verifier_version`
+- `notes`
+
+Each `nyov_promotions` row should be field-level, not whole-row-only:
+
+- `promotion_id`
+- `nyov_id`
+- `target_table`
+- `target_key`
+- `target_field`
+- `promoted_value`
+- `verification_level`
+- `evidence_json`
+- `promoted_at`
+- `promoted_by`
+- `notes`
+
 ## Subjective Field Promotion
 
 Subjective fields include mood, vibe, energy, danceability, situation tags, and

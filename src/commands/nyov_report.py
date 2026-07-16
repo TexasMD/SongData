@@ -110,6 +110,47 @@ def _fetch_verification_batch(
     return [row for row in queue if row["next_step"] == batch_step][:batch_limit]
 
 
+def _fetch_batch_evidence(conn: sqlite3.Connection, batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not batch:
+        return []
+    batch_ids = [row["nyov_id"] for row in batch]
+    placeholders = ",".join("?" for _ in batch_ids)
+    rows = conn.execute(
+        f"""
+        SELECT
+            e.nyov_id,
+            e.seed_title,
+            e.seed_artist,
+            e.seed_album,
+            o.observation_id,
+            o.source_path,
+            o.row_number,
+            o.parser,
+            o.observed_title,
+            o.observed_artist,
+            o.observed_album,
+            i.source_name AS identifier_source,
+            i.identifier_type,
+            i.identifier_value,
+            i.evidence_field,
+            i.observed_at,
+            o.raw_json
+        FROM nyov_entities e
+        JOIN nyov_source_observations o ON o.nyov_id = e.nyov_id
+        LEFT JOIN nyov_identifiers i ON i.observation_id = o.observation_id
+        WHERE e.nyov_id IN ({placeholders})
+        ORDER BY
+            e.seed_artist,
+            e.seed_title,
+            i.source_name,
+            o.source_path,
+            o.row_number
+        """,
+        batch_ids,
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def build_report(
     db_path: Path,
     *,
@@ -202,6 +243,7 @@ def build_report(
         )
         queue = _fetch_verification_queue(conn, queue_limit)
         batch = _fetch_verification_batch(conn, batch_step=batch_step, batch_limit=batch_limit)
+        batch_evidence = _fetch_batch_evidence(conn, batch)
 
     return {
         "database": str(db_path),
@@ -214,6 +256,7 @@ def build_report(
         "next_step_counts": next_step_counts,
         "verification_queue": queue,
         "verification_batch": batch,
+        "verification_batch_evidence": batch_evidence,
         "verification_batch_step": batch_step,
         "verification_batch_limit": batch_limit,
     }
@@ -262,6 +305,7 @@ def run(
     summary_path = output_dir / "summary.json"
     queue_path = output_dir / "verification_queue.csv"
     batch_path = output_dir / f"verification_batch_{batch_step}.csv"
+    evidence_path = output_dir / f"verification_batch_{batch_step}_evidence.csv"
     if write:
         output_dir.mkdir(parents=True, exist_ok=True)
         with summary_path.open("w", encoding="utf-8") as handle:
@@ -269,7 +313,7 @@ def run(
                 {
                     key: value
                     for key, value in report.items()
-                    if key not in {"verification_queue", "verification_batch"}
+                    if key not in {"verification_queue", "verification_batch", "verification_batch_evidence"}
                 },
                 handle,
                 indent=2,
@@ -277,11 +321,14 @@ def run(
             )
         _write_csv(queue_path, report["verification_queue"])
         _write_csv(batch_path, report["verification_batch"])
+        _write_csv(evidence_path, report["verification_batch_evidence"])
         print(f"Wrote summary to {summary_path}")
         print(f"Wrote verification queue to {queue_path}")
         print(f"Wrote verification batch to {batch_path}")
+        print(f"Wrote verification batch evidence to {evidence_path}")
     else:
         print(f"DRY RUN: Would write summary to {summary_path}")
         print(f"DRY RUN: Would write verification queue to {queue_path}")
         print(f"DRY RUN: Would write verification batch to {batch_path}")
+        print(f"DRY RUN: Would write verification batch evidence to {evidence_path}")
     return 0

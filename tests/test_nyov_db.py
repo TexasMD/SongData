@@ -29,8 +29,8 @@ def test_build_nyov_db_imports_seed_and_basket_evidence(tmp_path):
     )
     write_csv(
         basket / "spotify.csv",
-        ["Title", "Artist", "Album", "Spotify Track ID"],
-        [["Electric Avenue", "Eddy Grant", "Killer On The Rampage", "sp-1"]],
+        ["Title", "Artist", "Album", "Spotify Track ID", "MusicBrainz ID"],
+        [["Electric Avenue", "Eddy Grant", "Killer On The Rampage", "sp-1", "none"]],
     )
     (basket / "playlist.txt").write_text("Susan Wong - Billie Jean\n", encoding="utf-8")
     with zipfile.ZipFile(basket / "takeout.zip", "w") as archive:
@@ -50,6 +50,7 @@ def test_build_nyov_db_imports_seed_and_basket_evidence(tmp_path):
         identifiers = conn.execute("SELECT source_name, identifier_value FROM nyov_identifiers ORDER BY source_name").fetchall()
         assert ("Spotify", "sp-1") in identifiers
         assert ("YouTube Music", "yt-1") in identifiers
+        assert ("MusicBrainz", "none") not in identifiers
 
 
 def test_nyov_report_classifies_verification_candidates(tmp_path):
@@ -88,3 +89,32 @@ def test_nyov_report_classifies_verification_candidates(tmp_path):
     assert report["verification_queue"][0]["next_step"] == "candidate_dual_source_match"
     assert len(report["verification_batch"]) == 1
     assert report["verification_batch"][0]["seed_title"] == "Electric Avenue"
+    assert any(
+        row["identifier_source"] == "Spotify" and row["identifier_value"] == "sp-1"
+        for row in report["verification_batch_evidence"]
+    )
+    assert any(
+        row["identifier_source"] == "YouTube Music" and row["identifier_value"] == "yt-1"
+        for row in report["verification_batch_evidence"]
+    )
+
+
+def test_nyov_schema_has_field_level_verification_columns(tmp_path):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(seed, ["Title", "Artist", "Album"], [["Electric Avenue", "Eddy Grant", "Killer On The Rampage"]])
+
+    configured = paths(tmp_path)
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(configured, seed_csv=seed, basket_dir=basket, output_db=db_path)
+
+    with sqlite3.connect(db_path) as conn:
+        attempt_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(nyov_verification_attempts)").fetchall()
+        }
+        promotion_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(nyov_promotions)").fetchall()
+        }
+
+    assert {"provider_entity_type", "provider_entity_id", "title_match_status", "verifier_version"} <= attempt_columns
+    assert {"target_field", "promoted_value", "verification_level", "evidence_json"} <= promotion_columns

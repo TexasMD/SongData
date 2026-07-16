@@ -29,6 +29,7 @@ IDENTIFIER_PATTERNS = [
     ("itunes_track", re.compile(r"itunes.*id|trackid", re.I)),
     ("secondhandsongs", re.compile(r"secondhandsongs|shs", re.I)),
 ]
+PLACEHOLDER_IDENTIFIER_VALUES = {"", "none", "null", "n/a", "na", "unknown", "not found", "not_found"}
 
 
 @dataclass(frozen=True)
@@ -358,13 +359,24 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             attempt_id TEXT PRIMARY KEY,
             nyov_id TEXT NOT NULL,
             provider TEXT NOT NULL,
+            provider_entity_type TEXT NOT NULL,
+            provider_entity_id TEXT NOT NULL,
+            provider_url TEXT NOT NULL,
             query_title TEXT NOT NULL,
             query_artist TEXT NOT NULL,
             query_album TEXT NOT NULL,
             queried_at TEXT NOT NULL,
             result_json TEXT NOT NULL,
             match_status TEXT NOT NULL,
-            match_score REAL NOT NULL
+            match_score REAL NOT NULL,
+            title_match_status TEXT NOT NULL,
+            artist_match_status TEXT NOT NULL,
+            album_match_status TEXT NOT NULL,
+            duration_match_status TEXT NOT NULL,
+            isrc_match_status TEXT NOT NULL,
+            verifier TEXT NOT NULL,
+            verifier_version TEXT NOT NULL,
+            notes TEXT NOT NULL
         );
 
         CREATE TABLE nyov_conflicts (
@@ -381,6 +393,10 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             nyov_id TEXT NOT NULL,
             target_table TEXT NOT NULL,
             target_key TEXT NOT NULL,
+            target_field TEXT NOT NULL,
+            promoted_value TEXT NOT NULL,
+            verification_level TEXT NOT NULL,
+            evidence_json TEXT NOT NULL,
             promoted_at TEXT NOT NULL,
             promoted_by TEXT NOT NULL,
             notes TEXT NOT NULL
@@ -495,7 +511,7 @@ def _extract_identifiers(observation_id: str, nyov_id: str, raw_data: dict[str, 
     rows = []
     for field, value in raw_data.items():
         value = _clean(value)
-        if not value:
+        if value.lower() in PLACEHOLDER_IDENTIFIER_VALUES:
             continue
         identifier_type = ""
         for candidate_type, pattern in IDENTIFIER_PATTERNS:

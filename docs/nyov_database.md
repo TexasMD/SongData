@@ -31,6 +31,7 @@ The write-enabled report creates:
 - `data\exports\codex\nyov_report\summary.json`
 - `data\exports\codex\nyov_report\verification_queue.csv`
 - `data\exports\codex\nyov_report\verification_batch_candidate_dual_source_match.csv`
+- `data\exports\codex\nyov_report\verification_batch_candidate_dual_source_match_evidence.csv`
 
 The first build inventories local basket evidence only. It imports CSV, TXT,
 XLSX, DOCX, and ZIP-contained CSV/TXT files into these tables:
