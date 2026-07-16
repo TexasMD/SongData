@@ -20,6 +20,7 @@ from src.commands import nyov_report as nyov_report_command
 from src.commands import verify_nyov_batch as verify_nyov_batch_command
 from src.commands import nyov_verification_summary as nyov_verification_summary_command
 from src.commands import nyov_promotion_review as nyov_promotion_review_command
+from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -375,6 +376,16 @@ def nyov_promotion_review(write_enabled=False, db_path=None, output_dir=None):
     )
 
 
+def apply_nyov_promotions(write_enabled=False, db_path=None, review_csv=None, promoted_by="manual_review"):
+    apply_nyov_promotions_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        db_path=db_path,
+        review_csv=review_csv,
+        promoted_by=promoted_by,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -474,6 +485,13 @@ def main():
     )
     parser_nyov_promotion_review.add_argument("--db-path", type=Path, default=None)
     parser_nyov_promotion_review.add_argument("--output-dir", type=Path, default=None)
+    parser_apply_nyov_promotions = subparsers.add_parser(
+        "apply-nyov-promotions",
+        help="Apply approved NYOV promotion review rows into nyov_promotions",
+    )
+    parser_apply_nyov_promotions.add_argument("--db-path", type=Path, default=None)
+    parser_apply_nyov_promotions.add_argument("--input", type=Path, default=None)
+    parser_apply_nyov_promotions.add_argument("--promoted-by", default="manual_review")
 
     args = parser.parse_args()
 
@@ -551,6 +569,13 @@ def main():
             write_enabled=args.write,
             db_path=args.db_path,
             output_dir=args.output_dir,
+        )
+    elif args.command == "apply-nyov-promotions":
+        apply_nyov_promotions(
+            write_enabled=args.write,
+            db_path=args.db_path,
+            review_csv=args.input,
+            promoted_by=args.promoted_by,
         )
 
 

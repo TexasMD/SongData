@@ -10,6 +10,7 @@ from src.commands import verify_nyov_batch
 from src.commands.verify_nyov_batch import ProviderResult
 from src.commands.nyov_verification_summary import build_summary
 from src.commands.nyov_promotion_review import build_promotion_review
+from src.commands.apply_nyov_promotions import apply_promotions
 
 
 def write_csv(path: Path, headers: list[str], rows: list[list[str]]) -> None:
@@ -624,3 +625,108 @@ def test_nyov_promotion_review_withholds_conflicted_album(tmp_path):
     fields = {row["target_field"] for row in rows}
     assert "album" not in fields
     assert {"title", "artist", "itunes_track_id", "musicbrainz_recording_id"} <= fields
+
+
+def test_apply_nyov_promotions_writes_only_approved_rows(tmp_path):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(seed, ["Title", "Artist", "Album"], [["Electric Avenue", "Eddy Grant", "Killer On The Rampage"]])
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+
+    review_csv = tmp_path / "review.csv"
+    write_csv(
+        review_csv,
+        [
+            "nyov_id",
+            "seed_title",
+            "seed_artist",
+            "seed_album",
+            "review_bucket",
+            "target_table",
+            "target_key",
+            "target_field",
+            "proposed_value",
+            "verification_level",
+            "supporting_sources",
+            "conflicting_sources",
+            "best_provider",
+            "best_provider_entity_id",
+            "best_match_score",
+            "review_decision",
+            "review_notes",
+        ],
+        [
+            [
+                "NYOV-1",
+                "Electric Avenue",
+                "Eddy Grant",
+                "Killer On The Rampage",
+                "review_candidate_strong_identity",
+                "recordings",
+                "NYOV-1",
+                "title",
+                "Electric Avenue",
+                "verified_strong",
+                "iTunes:it-1 | MusicBrainz:mb-1",
+                "",
+                "iTunes",
+                "it-1",
+                "1.000",
+                "approve",
+                "looks good",
+            ],
+            [
+                "NYOV-1",
+                "Electric Avenue",
+                "Eddy Grant",
+                "Killer On The Rampage",
+                "review_candidate_strong_identity",
+                "recordings",
+                "NYOV-1",
+                "album",
+                "Killer On The Rampage",
+                "verified_supported",
+                "iTunes:it-1",
+                "",
+                "iTunes",
+                "it-1",
+                "1.000",
+                "",
+                "",
+            ],
+            [
+                "NYOV-1",
+                "Electric Avenue",
+                "Eddy Grant",
+                "Killer On The Rampage",
+                "review_candidate_strong_identity",
+                "recordings",
+                "NYOV-1",
+                "artist",
+                "Wrong Artist",
+                "verified_strong",
+                "iTunes:it-2",
+                "",
+                "iTunes",
+                "it-2",
+                "0.900",
+                "reject",
+                "bad match",
+            ],
+        ],
+    )
+
+    dry_run = apply_promotions(db_path, review_csv, write=False)
+    assert dry_run["approved_rows"] == 1
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM nyov_promotions").fetchone()[0] == 0
+
+    summary = apply_promotions(db_path, review_csv, promoted_by="tester", write=True)
+
+    assert summary["promotions_written"] == 1
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT target_field, promoted_value, verification_level, promoted_by, notes FROM nyov_promotions"
+        ).fetchone()
+    assert row == ("title", "Electric Avenue", "verified_strong", "tester", "looks good")

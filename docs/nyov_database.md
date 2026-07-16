@@ -69,6 +69,16 @@ The write-enabled review creates:
 This is a review file only. It does not promote data into official MusicDB
 tables.
 
+Approved promotion apply command:
+
+```powershell
+python scripts\musicdb.py apply-nyov-promotions
+python scripts\musicdb.py --write apply-nyov-promotions --input data\exports\codex\nyov_promotion_review\promotion_review_candidates.csv --promoted-by manual_review
+```
+
+Only rows with `review_decision` set to `approve` are written into
+`nyov_promotions`. This still does not write to official MusicDB tables.
+
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`
