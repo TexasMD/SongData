@@ -1,0 +1,35 @@
+{
+  "recordings": {
+    "rel": "SongDB_v2/recordings.csv",
+    "key": "Recording ID",
+    "current_rows": 9672,
+    "head_rows": 9704
+  },
+  "recordings_counts": {
+    "added": 20,
+    "removed": 52,
+    "matched_replacements": 0,
+    "unpaired_added": 20,
+    "unpaired_removed": 52
+  },
+  "songs_counts": {
+    "added": 16,
+    "removed": 52,
+    "matched_replacements": 0,
+    "unpaired_added": 16,
+    "unpaired_removed": 52
+  },
+  "external_links_counts": {
+    "added_rows": 63,
+    "removed_rows": 63,
+    "matched_id_replacements": 0
+  },
+  "main_database_counts": {
+    "added_row_versions": 22,
+    "removed_row_versions": 22
+  },
+  "possible_match_counts": {
+    "recordings_possible_matches": 8,
+    "songs_possible_matches": 6
+  }
+}
