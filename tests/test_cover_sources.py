@@ -322,6 +322,45 @@ def test_secondhandsongs_client_paginates_until_total_results(monkeypatch):
     assert pages_seen == [0, 1, 2]
 
 
+def test_secondhandsongs_smoke_diagnostics_summarize_actual_checks():
+    smoke_path = Path(__file__).resolve().parents[1] / "scripts" / "smoke_cover_sources.py"
+    spec = spec_from_file_location("smoke_cover_sources", smoke_path)
+    assert spec and spec.loader
+    smoke = module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+
+    rows = [
+        {"title": "Tainted Love", "artist": "Flying Pickets"},
+        {"title": "Tainted Love", "artist": "John Cale"},
+    ]
+    checks = [
+        {
+            "query_kind": "search_performance",
+            "query_url": "https://api.secondhandsongs.com/search/performance?title=Tainted+Love&performer=Gloria+Jones",
+            "result_count": 1,
+        },
+        {
+            "query_kind": "search_performance",
+            "query_url": "https://api.secondhandsongs.com/search/performance?title=Tainted+Love&page=0",
+            "result_count": 100,
+        },
+        {
+            "query_kind": "performance_detail",
+            "query_url": "https://api.secondhandsongs.com/performance/646",
+            "result_count": 225,
+        },
+    ]
+
+    diagnostics = smoke.secondhandsongs_diagnostics(rows, checks)
+
+    assert diagnostics["returned_row_count"] == 2
+    assert diagnostics["exact_performance_count"] == 1
+    assert diagnostics["broad_performance_count"] == 100
+    assert diagnostics["detail_result_count"] == 225
+    assert diagnostics["detail_url"] == "https://api.secondhandsongs.com/performance/646"
+    assert diagnostics["known_covers_present"] == {"Jeff Buckley": False, "John Cale": True}
+
+
 def test_whosampled_parser_handles_track_connections():
     client = WhoSampledClient()
     html = """

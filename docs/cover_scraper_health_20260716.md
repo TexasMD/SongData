@@ -22,6 +22,18 @@ Observed result:
 | `SecondHandSongs` | Functional after API-domain/detail fix | The dedicated API domain returned 674 cover/original relationship rows through `/performance/1108` detail for the same known cover-heavy query. |
 | `WhoSampled` | Blocked in current environment | Search requests returned HTTP 403 after backoff attempts. |
 
+Additional SHS spot check:
+
+```powershell
+python scripts\smoke_cover_sources.py --title "Tainted Love" --artist "Gloria Jones" --year 1964 --source SecondHandSongs --output data\exports\codex\secondhandsongs_tainted_love_smoke_20260716.json
+```
+
+Result: SecondHandSongs returned 221 normalized cover rows for `Tainted Love`
+/ `Gloria Jones`. The live API search found one exact original performance
+at `https://api.secondhandsongs.com/performance/646`, 222 broad performance
+matches across zero-based result pages, and a performance-detail result count
+of 225.
+
 SecondHandSongs API access works through `https://api.secondhandsongs.com`.
 The API can be used without a key at lower rate limits. If SHS issues a real
 project key, set it via:
@@ -41,6 +53,7 @@ Implementation notes:
 - Do not send `format=json` to the dedicated API domain.
 - `pageSize=100` works; larger page sizes returned `400 Bad Request`.
 - Prefer `/performance/{id}` detail once the exact source performance is found; detail returned a richer cover family than broad search pages.
+- Derive smoke diagnostics from the scrape run's own source checks. Immediate duplicate SHS calls can return inconsistent windows under rate limits and make a healthy scrape look empty.
 - `search/object` returned server errors in this environment and should not be used as the primary path yet.
 - Repeated broad search calls can return inconsistent windows under SHS limits. Treat detail lookup as the primary source-family result and broad search as diagnostics.
 

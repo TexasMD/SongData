@@ -19,7 +19,6 @@ if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
 from src.cover_info_client import scrape_cover_info
-from src.secondhandsongs_client import SecondHandSongsClient
 from src.secondhandsongs_client import scrape_secondhandsongs
 from src.whosampled_client import scrape_whosampled
 
@@ -67,8 +66,10 @@ def run_smoke(title: str, artist: str, year: str, sources: list[str]) -> dict[st
     source_results: dict[str, Any] = {}
     for source in sources:
         started_at = _utc_now_iso()
+        source_check_start = len(checks)
         try:
             rows = SOURCES[source](title, artist, year, callback)
+            source_checks = checks[source_check_start:]
             result: dict[str, Any] = {
                 "status": "ok",
                 "started_at": started_at,
@@ -77,7 +78,7 @@ def run_smoke(title: str, artist: str, year: str, sources: list[str]) -> dict[st
                 "sample_rows": rows[:5],
             }
             if source == "SecondHandSongs":
-                result["diagnostics"] = secondhandsongs_diagnostics(title, artist, callback)
+                result["diagnostics"] = secondhandsongs_diagnostics(rows, source_checks)
             source_results[source] = result
         except Exception as exc:  # noqa: BLE001 - smoke test must preserve source-specific failures.
             source_results[source] = {
@@ -98,26 +99,31 @@ def run_smoke(title: str, artist: str, year: str, sources: list[str]) -> dict[st
 
 
 def secondhandsongs_diagnostics(
-    title: str,
-    artist: str,
-    callback: Callable[..., None],
+    rows: list[dict[str, Any]],
+    source_checks: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    client = SecondHandSongsClient()
-    exact = client.search_performances(title, performer=artist, callback=callback, page_size=25, max_pages=1)
-    broad = client.search_performances(title, callback=callback, page_size=100, max_pages=20)
-    works = client.search_works(title, callback=callback, page_size=100, max_pages=5)
-    detail: dict[str, Any] = {}
-    if exact:
-        detail = client.get_performance(str(exact[0].get("uri") or ""), callback=callback)
+    exact_counts = [
+        check.get("result_count")
+        for check in source_checks
+        if check.get("query_kind") == "search_performance" and "performer=" in str(check.get("query_url") or "")
+    ]
+    broad_counts = [
+        check.get("result_count")
+        for check in source_checks
+        if check.get("query_kind") == "search_performance" and "performer=" not in str(check.get("query_url") or "")
+    ]
+    detail_checks = [check for check in source_checks if check.get("query_kind") == "performance_detail"]
+    detail_check = detail_checks[-1] if detail_checks else {}
+    artists = {str(row.get("artist") or "").casefold() for row in rows}
     return {
-        "exact_performance_count": len(exact),
-        "broad_performance_count": len(broad),
-        "work_search_count": len(works),
-        "detail_cover_count": len(detail.get("covers") or []),
-        "detail_original_count": len(detail.get("originals") or []),
+        "returned_row_count": len(rows),
+        "exact_performance_count": exact_counts[0] if exact_counts else 0,
+        "broad_performance_count": sum(count for count in broad_counts if isinstance(count, int)),
+        "detail_result_count": detail_check.get("result_count", 0),
+        "detail_url": detail_check.get("query_url", ""),
         "known_covers_present": {
-            "Jeff Buckley": any((row.get("performer") or {}).get("name") == "Jeff Buckley" for row in broad),
-            "John Cale": any((row.get("performer") or {}).get("name") == "John Cale" for row in broad),
+            "Jeff Buckley": "jeff buckley" in artists,
+            "John Cale": "john cale" in artists,
         },
     }
 
