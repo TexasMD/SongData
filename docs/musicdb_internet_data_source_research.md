@@ -169,16 +169,39 @@ Use for:
 - Echo Nest-era audio analysis
 - tempo/key/time signature candidates
 - Last.fm tag joins
+- SecondHandSongs cover-clique joins through the official MSD SHS subset
 
 Fit:
 
 - Valuable if matched by artist/title/track ID.
 - Older catalog coverage is good; modern tracks are weaker.
+- The SHS subset is especially useful as a bulk relationship backbone because
+  it groups MSD track IDs into cover-version cliques and preserves SHS work and
+  performance identifiers where available.
 
 Links:
 
 - http://millionsongdataset.com/
 - http://millionsongdataset.com/pages/getting-dataset/
+- http://millionsongdataset.com/secondhand/
+
+Repo import:
+
+```powershell
+python scripts\musicdb.py --write import-msd-secondhand
+```
+
+Default local outputs:
+
+- `data\staging\codex\msd_secondhand\msd_shs_cliques.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_performances.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_connections.csv`
+- `data\staging\codex\msd_secondhand\msd_secondhand.sqlite`
+
+The subset stores MSD track IDs, MSD artist IDs, SHS work IDs, and SHS
+performance IDs. It does not by itself include full readable artist/title
+metadata for every track, so the next crosswalk should join those MSD track IDs
+to an MSD metadata source before promoting local MusicDB cover candidates.
 
 ### Last.fm Datasets / LFM-1b
 

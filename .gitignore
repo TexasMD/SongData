@@ -23,6 +23,7 @@ tmp/
 # Staged agent outputs are local review artifacts unless explicitly promoted.
 data/staging/antigravity/
 data/staging/codex/
+data/staging/external/
 data/staging/jules/
 
 # Generated databases and SQLite sidecar files
