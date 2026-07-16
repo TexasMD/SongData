@@ -17,6 +17,7 @@ from src.commands import build_reference_db as reference_db_command
 from src.commands import metadata_audit as metadata_audit_command
 from src.commands import build_nyov_db as nyov_db_command
 from src.commands import nyov_report as nyov_report_command
+from src.commands import verify_nyov_batch as verify_nyov_batch_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -333,6 +334,23 @@ def nyov_report(
     )
 
 
+def verify_nyov_batch(
+    write_enabled=False,
+    db_path=None,
+    batch_step="candidate_dual_source_match",
+    batch_limit=10,
+    providers="itunes,musicbrainz,spotify",
+):
+    verify_nyov_batch_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        db_path=db_path,
+        batch_step=batch_step,
+        batch_limit=batch_limit,
+        providers=providers,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -410,6 +428,14 @@ def main():
     parser_nyov_report.add_argument("--queue-limit", type=int, default=250)
     parser_nyov_report.add_argument("--batch-step", default="candidate_dual_source_match")
     parser_nyov_report.add_argument("--batch-limit", type=int, default=100)
+    parser_verify_nyov = subparsers.add_parser(
+        "verify-nyov-batch",
+        help="Verify a NYOV candidate batch against external providers without promoting rows",
+    )
+    parser_verify_nyov.add_argument("--db-path", type=Path, default=None)
+    parser_verify_nyov.add_argument("--batch-step", default="candidate_dual_source_match")
+    parser_verify_nyov.add_argument("--batch-limit", type=int, default=10)
+    parser_verify_nyov.add_argument("--providers", default="itunes,musicbrainz,spotify")
 
     args = parser.parse_args()
 
@@ -465,6 +491,14 @@ def main():
             queue_limit=args.queue_limit,
             batch_step=args.batch_step,
             batch_limit=args.batch_limit,
+        )
+    elif args.command == "verify-nyov-batch":
+        verify_nyov_batch(
+            write_enabled=args.write,
+            db_path=args.db_path,
+            batch_step=args.batch_step,
+            batch_limit=args.batch_limit,
+            providers=args.providers,
         )
 
 

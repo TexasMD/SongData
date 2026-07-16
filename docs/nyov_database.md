@@ -26,6 +26,16 @@ python scripts\musicdb.py --write nyov-report
 python scripts\musicdb.py --write nyov-report --batch-step candidate_dual_source_match --batch-limit 100
 ```
 
+Provider verification command:
+
+```powershell
+python scripts\musicdb.py verify-nyov-batch
+python scripts\musicdb.py --write verify-nyov-batch --batch-step candidate_dual_source_match --batch-limit 10 --providers itunes,musicbrainz,spotify
+```
+
+`verify-nyov-batch` records provider lookups in `nyov_verification_attempts`.
+It does not promote fields into official MusicDB tables.
+
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`
