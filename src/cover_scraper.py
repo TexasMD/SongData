@@ -23,6 +23,8 @@ BROWSER_USER_AGENTS = [
 ]
 
 SourceCheckCallback = Callable[[str, str, str, int | None, str], None]
+SourceScrapeFn = Callable[[str, str, str, SourceCheckCallback | None], list[dict]]
+CROSS_SOURCE_EMPTY_RETRY_THRESHOLD = 10
 
 def get_random_headers():
     return {
@@ -177,6 +179,53 @@ def scrape_whosampled(
         recording_id="",
     )
 
+
+def _scrape_musicbrainz(
+    title: str,
+    artist: str,
+    original_year: str,
+    on_source_checked: SourceCheckCallback | None = None,
+) -> list[dict]:
+    work_id = fetch_work_id_for_recording(title, artist, on_source_checked=on_source_checked)
+    if not work_id:
+        return []
+    return fetch_covers_for_work(work_id, title, artist, original_year, on_source_checked=on_source_checked)
+
+
+def _scrape_cover_info_source(
+    title: str,
+    artist: str,
+    original_year: str,
+    on_source_checked: SourceCheckCallback | None = None,
+) -> list[dict]:
+    return scrape_cover_info(title, artist, original_year, callback=on_source_checked)
+
+
+def _retry_suspicious_empty_sources(
+    source_rows: dict[str, list[dict]],
+    source_fns: dict[str, SourceScrapeFn],
+    title: str,
+    artist: str,
+    original_year: str,
+    on_source_checked: SourceCheckCallback | None,
+) -> None:
+    best_source_count = max((len(rows) for rows in source_rows.values()), default=0)
+    if best_source_count < CROSS_SOURCE_EMPTY_RETRY_THRESHOLD:
+        return
+
+    for source, rows in list(source_rows.items()):
+        if rows:
+            continue
+        retry_rows = source_fns[source](title, artist, original_year, on_source_checked)
+        source_rows[source] = retry_rows
+        _emit_checked(
+            on_source_checked,
+            source=source,
+            query_kind="cross_source_empty_retry",
+            query_url="internal://cross-source-empty-retry",
+            result_count=len(retry_rows),
+        )
+
 def scrape_covers(
     title: str,
     artist: str,
@@ -184,21 +233,18 @@ def scrape_covers(
     on_source_checked: SourceCheckCallback | None = None,
 ) -> list:
     """End-to-end function to scrape cover songs from all sources and deduplicate."""
-    covers = []
-    
-    # 1. MusicBrainz
-    work_id = fetch_work_id_for_recording(title, artist, on_source_checked=on_source_checked)
-    if work_id:
-        covers.extend(fetch_covers_for_work(work_id, title, artist, original_year, on_source_checked=on_source_checked))
-        
-    # 2. cover.info
-    covers.extend(scrape_cover_info(title, artist, original_year, callback=on_source_checked))
-
-    # 3. SecondHandSongs
-    covers.extend(scrape_secondhandsongs(title, artist, original_year, on_source_checked=on_source_checked))
-    
-    # 4. WhoSampled
-    covers.extend(scrape_whosampled(title, artist, original_year, on_source_checked=on_source_checked))
+    source_fns: dict[str, SourceScrapeFn] = {
+        "MusicBrainz": _scrape_musicbrainz,
+        "cover.info": _scrape_cover_info_source,
+        "SecondHandSongs": scrape_secondhandsongs,
+        "WhoSampled": scrape_whosampled,
+    }
+    source_rows = {
+        source: scrape_fn(title, artist, original_year, on_source_checked)
+        for source, scrape_fn in source_fns.items()
+    }
+    _retry_suspicious_empty_sources(source_rows, source_fns, title, artist, original_year, on_source_checked)
+    covers = [cover for rows in source_rows.values() for cover in rows]
     
     # Deduplicate based on title and artist
     unique_covers = {}

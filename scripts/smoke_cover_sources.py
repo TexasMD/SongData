@@ -24,6 +24,7 @@ from src.whosampled_client import scrape_whosampled
 
 
 SourceFn = Callable[[str, str, str, Callable[..., None]], list[dict[str, Any]]]
+CROSS_SOURCE_EMPTY_RETRY_THRESHOLD = 10
 
 
 def _utc_now_iso() -> str:
@@ -65,29 +66,27 @@ def run_smoke(title: str, artist: str, year: str, sources: list[str]) -> dict[st
 
     source_results: dict[str, Any] = {}
     for source in sources:
-        started_at = _utc_now_iso()
-        source_check_start = len(checks)
-        try:
-            rows = SOURCES[source](title, artist, year, callback)
-            source_checks = checks[source_check_start:]
-            result: dict[str, Any] = {
-                "status": "ok",
-                "started_at": started_at,
-                "finished_at": _utc_now_iso(),
-                "row_count": len(rows),
-                "sample_rows": rows[:5],
-            }
-            if source == "SecondHandSongs":
-                result["diagnostics"] = secondhandsongs_diagnostics(rows, source_checks)
-            source_results[source] = result
-        except Exception as exc:  # noqa: BLE001 - smoke test must preserve source-specific failures.
-            source_results[source] = {
-                "status": "error",
-                "started_at": started_at,
-                "finished_at": _utc_now_iso(),
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-            }
+        source_results[source] = _run_source(source, title, artist, year, callback, checks)
+
+    best_row_count = max(
+        (int(result.get("row_count") or 0) for result in source_results.values() if result.get("status") == "ok"),
+        default=0,
+    )
+    if best_row_count >= CROSS_SOURCE_EMPTY_RETRY_THRESHOLD:
+        for source in sources:
+            result = source_results[source]
+            if result.get("status") != "ok" or int(result.get("row_count") or 0) != 0:
+                continue
+            retry_result = _run_source(source, title, artist, year, callback, checks)
+            retry_result["initial_row_count"] = 0
+            retry_result["retry_attempts"] = 1
+            retry_result["retry_reason"] = (
+                f"cross_source_empty: another source returned at least "
+                f"{CROSS_SOURCE_EMPTY_RETRY_THRESHOLD} rows"
+            )
+            if int(retry_result.get("row_count") or 0) == 0:
+                retry_result["warning"] = "suspicious_empty_after_retry"
+            source_results[source] = retry_result
 
     return {
         "title": title,
@@ -96,6 +95,39 @@ def run_smoke(title: str, artist: str, year: str, sources: list[str]) -> dict[st
         "sources": source_results,
         "source_checks": checks,
     }
+
+
+def _run_source(
+    source: str,
+    title: str,
+    artist: str,
+    year: str,
+    callback: Callable[..., None],
+    checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    started_at = _utc_now_iso()
+    source_check_start = len(checks)
+    try:
+        rows = SOURCES[source](title, artist, year, callback)
+        source_checks = checks[source_check_start:]
+        result: dict[str, Any] = {
+            "status": "ok",
+            "started_at": started_at,
+            "finished_at": _utc_now_iso(),
+            "row_count": len(rows),
+            "sample_rows": rows[:5],
+        }
+        if source == "SecondHandSongs":
+            result["diagnostics"] = secondhandsongs_diagnostics(rows, source_checks)
+        return result
+    except Exception as exc:  # noqa: BLE001 - smoke test must preserve source-specific failures.
+        return {
+            "status": "error",
+            "started_at": started_at,
+            "finished_at": _utc_now_iso(),
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        }
 
 
 def secondhandsongs_diagnostics(

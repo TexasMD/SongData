@@ -42,6 +42,18 @@ Tier 3 sources are leads only:
 - user-edited local CSVs without provenance
 - generic web snippets
 
+Relationship Tier 1 sources are suitable for cover/original/sample/remix
+relationship verification when the exact work, performance, or relationship page
+has been matched:
+
+- SecondHandSongs
+- WhoSampled
+- MusicBrainz work relationships, when present
+
+These sources should be treated as high-confidence for relationship facts only.
+They do not automatically verify foundational recording identity fields such as
+album, release date, duration, ISRC, or provider track IDs.
+
 ## Foundational Field Promotion
 
 Foundational fields include title, artist, album, track number, release date,
@@ -142,12 +154,26 @@ Review the generated file:
 The first batch should prove the promotion workflow on a high-confidence set
 before attempting lower-confidence buckets.
 
+## Empty Source Retry Rule
+
+If one cover relationship source returns zero rows while another relationship
+source returns 10 or more rows for the same title/artist query, treat the empty
+result as suspicious rather than negative evidence. The system should retry that
+source once or use its best available alternate path before recording the source
+as empty.
+
+After retry:
+
+- if rows are found, keep them with normal source provenance;
+- if the source is still empty, record the check as
+  `suspicious_empty_after_retry` or equivalent review evidence;
+- do not use the empty result to overrule the source that returned substantial
+  relationship evidence.
+
 ## Open Policy Questions
 
 - Should YouTube Music count as Tier 1 only when a stable music entity exists,
   or is a stable video ID enough?
-- Should SecondHandSongs be Tier 1 for cover/original relationship facts, while
-  remaining Tier 2 for recording identity?
 - Should subjective tag promotion require human review for every tag, or only
   for tags used in public UI filters?
 - What confidence threshold should force a conflict row instead of an automated

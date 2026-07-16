@@ -9,6 +9,7 @@ import sys
 
 from bs4 import BeautifulSoup
 
+import src.cover_scraper as cover_scraper
 from src.cover_info_client import CoverInfoClient
 from src.secondhandsongs_client import SecondHandSongsClient
 from src.whosampled_client import WhoSampledClient
@@ -359,6 +360,79 @@ def test_secondhandsongs_smoke_diagnostics_summarize_actual_checks():
     assert diagnostics["detail_result_count"] == 225
     assert diagnostics["detail_url"] == "https://api.secondhandsongs.com/performance/646"
     assert diagnostics["known_covers_present"] == {"Jeff Buckley": False, "John Cale": True}
+
+
+def test_smoke_retries_source_empty_when_peer_has_many_results():
+    smoke_path = Path(__file__).resolve().parents[1] / "scripts" / "smoke_cover_sources.py"
+    spec = spec_from_file_location("smoke_cover_sources_retry", smoke_path)
+    assert spec and spec.loader
+    smoke = module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+
+    calls = {"empty.source": 0}
+
+    def many_source(title, artist, year, callback):
+        return [{"title": f"Cover {index}", "artist": f"Artist {index}"} for index in range(10)]
+
+    def empty_source(title, artist, year, callback):
+        calls["empty.source"] += 1
+        return []
+
+    smoke.SOURCES = {
+        "many.source": many_source,
+        "empty.source": empty_source,
+    }
+
+    result = smoke.run_smoke("Song", "Artist", "2000", ["many.source", "empty.source"])
+
+    empty_result = result["sources"]["empty.source"]
+    assert calls["empty.source"] == 2
+    assert empty_result["retry_attempts"] == 1
+    assert empty_result["retry_reason"].startswith("cross_source_empty")
+    assert empty_result["warning"] == "suspicious_empty_after_retry"
+
+
+def test_scrape_covers_retries_empty_sources_when_peer_has_many_results(monkeypatch):
+    monkeypatch.setattr(cover_scraper, "fetch_work_id_for_recording", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        cover_scraper,
+        "scrape_cover_info",
+        lambda *args, **kwargs: [
+            {
+                "title": f"Song {index}",
+                "artist": f"Artist {index}",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "cover.info",
+            }
+            for index in range(10)
+        ],
+    )
+    secondhandsongs_calls = {"count": 0}
+
+    def fake_secondhandsongs(title, artist, original_year="", on_source_checked=None):
+        secondhandsongs_calls["count"] += 1
+        if secondhandsongs_calls["count"] == 1:
+            return []
+        return [
+            {
+                "title": "Song 10",
+                "artist": "Artist 10",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "SecondHandSongs",
+            }
+        ]
+
+    monkeypatch.setattr(cover_scraper, "scrape_secondhandsongs", fake_secondhandsongs)
+    monkeypatch.setattr(cover_scraper, "scrape_whosampled", lambda *args, **kwargs: [])
+    checks = []
+
+    rows = cover_scraper.scrape_covers("Song", "Artist", "2000", on_source_checked=lambda *args: checks.append(args))
+
+    assert secondhandsongs_calls["count"] == 2
+    assert any(row["source"] == "SecondHandSongs" for row in rows)
+    assert ("SecondHandSongs", "cross_source_empty_retry", "internal://cross-source-empty-retry", 1) == checks[-2][:4]
 
 
 def test_whosampled_parser_handles_track_connections():

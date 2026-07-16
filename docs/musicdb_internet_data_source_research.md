@@ -268,8 +268,11 @@ Use for:
 
 Fit:
 
-- Very valuable but access/licensing are restrictive.
-- Treat as manual verification unless an approved API/data route exists.
+- High-confidence relationship source for samples, covers, and remixes when
+  an exact matched page or parsed relationship is captured.
+- Access/licensing are restrictive, and live scraping may be blocked. Treat
+  generated search links as leads only; promote exact relationship evidence
+  after review or approved parser/API access.
 
 Links:
 
@@ -363,7 +366,8 @@ Links:
 
 - AllMusic: excellent editorial metadata, but no general public data export.
 - Rate Your Music: useful human genre consensus, but no official public API for bulk import.
-- WhoSampled: high value, but access constraints.
+- WhoSampled: high value and reliable for exact relationship evidence, but
+  access constraints require careful verification and conservative automation.
 - Ultimate Guitar: high value for tabs, but verify manually and respect terms.
 - Random GitHub/Kaggle Spotify dumps: inspect licensing and provenance first.
 
