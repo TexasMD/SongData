@@ -2,10 +2,8 @@ import time
 import random
 import requests
 import logging
-import re
 from datetime import datetime, timezone
 from typing import Callable
-from urllib.parse import quote_plus
 
 from src.cover_info_client import scrape_cover_info
 from src.secondhandsongs_client import scrape_secondhandsongs as scrape_secondhandsongs_client

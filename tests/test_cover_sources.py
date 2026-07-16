@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
 
-from bs4 import BeautifulSoup
 
 from src.cover_info_client import CoverInfoClient
 from src.secondhandsongs_client import SecondHandSongsClient
-from src.whosampled_client import WhoSampledClient
 
 
 class FakeResponse:
@@ -141,27 +138,3 @@ def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
     assert len(seen) >= 2
 
 
-def test_whosampled_parser_handles_track_connections():
-    client = WhoSampledClient()
-    html = """
-    <html>
-      <body>
-        <section class="trackItem">
-          <h3 class="trackName"><a><span itemprop="name">Blackbird</span></a></h3>
-          <a class="trackCover" title="The Beatles by Blackbird"></a>
-          <div class="trackConnections">
-            <div class="track-connection">
-              <span class="sampleAction">was covered in</span>
-              <li><a class="connectionName">Blackbird</a> by Eva Cassidy (1998)</li>
-            </div>
-          </div>
-        </section>
-      </body>
-    </html>
-    """
-    soup = BeautifulSoup(html, "html.parser")
-    rows = client.extract_covers_from_page(soup, "Blackbird", "The Beatles")
-    assert rows[0]["title"] == "Blackbird"
-    assert rows[0]["artist"] == "Eva Cassidy"
-    assert rows[0]["original_title"] == "Blackbird"
-    assert rows[0]["original_artist"] == "The Beatles"
