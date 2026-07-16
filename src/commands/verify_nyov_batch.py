@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sqlite3
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +25,7 @@ from src.normalization import normalize_search_text
 
 VERIFIER_VERSION = "nyov-provider-verifier-v1"
 DEFAULT_PROVIDERS = ("itunes", "musicbrainz", "spotify")
+DEFAULT_TIE_BREAKER_PROVIDERS = ("spotify",)
 
 
 @dataclass(frozen=True)
@@ -268,12 +270,66 @@ def _insert_attempts(conn: sqlite3.Connection, rows: list[tuple[str, ...]]) -> N
     )
 
 
+def _empty_provider_stat() -> dict[str, object]:
+    return {
+        "calls": 0,
+        "elapsed_seconds": 0.0,
+        "results": 0,
+        "matched": 0,
+        "needs_review": 0,
+        "rejected": 0,
+    }
+
+
+def _record_provider_stat(
+    stats: dict[str, dict[str, object]],
+    provider: str,
+    *,
+    elapsed_seconds: float,
+    rows: list[tuple[str, ...]],
+) -> None:
+    stat = stats.setdefault(provider, _empty_provider_stat())
+    stat["calls"] = int(stat["calls"]) + 1
+    stat["elapsed_seconds"] = round(float(stat["elapsed_seconds"]) + elapsed_seconds, 3)
+    stat["results"] = int(stat["results"]) + len(rows)
+    for row in rows:
+        status = row[11]
+        if status in {"matched", "needs_review", "rejected"}:
+            stat[status] = int(stat[status]) + 1
+
+
+def _is_ambiguous(rows: list[tuple[str, ...]]) -> bool:
+    reviewable = [row for row in rows if row[11] in {"matched", "needs_review"}]
+    matched_providers = {row[2] for row in rows if row[11] == "matched"}
+    if len(matched_providers) < 2:
+        return True
+    return any(row[14] == "different" or row[15] == "different" or row[16] == "different" for row in reviewable)
+
+
+def _run_provider_for_seed(
+    seed: dict[str, str],
+    provider_name: str,
+    provider_fn: Callable[[str, str], list[ProviderResult]],
+    queried_at: str,
+    stats: dict[str, dict[str, object]],
+) -> list[tuple[str, ...]]:
+    title = str(seed.get("seed_title") or "")
+    artist = str(seed.get("seed_artist") or "")
+    started_at = time.perf_counter()
+    results = provider_fn(title, artist)
+    rows = [_to_attempt_row(seed, result, queried_at) for result in results]
+    _record_provider_stat(stats, provider_name, elapsed_seconds=time.perf_counter() - started_at, rows=rows)
+    return rows
+
+
 def verify_batch(
     db_path: Path,
     *,
     batch_step: str = "candidate_dual_source_match",
     batch_limit: int = 10,
     providers: Iterable[str] = DEFAULT_PROVIDERS,
+    strategy: str = "all",
+    tie_breaker_providers: Iterable[str] = DEFAULT_TIE_BREAKER_PROVIDERS,
     write: bool = False,
 ) -> dict[str, object]:
     report = build_report(db_path, queue_limit=batch_limit, batch_step=batch_step, batch_limit=batch_limit)
@@ -285,6 +341,8 @@ def verify_batch(
             "batch_step": batch_step,
             "batch_limit": batch_limit,
             "providers": list(providers),
+            "strategy": strategy,
+            "tie_breaker_providers": list(tie_breaker_providers),
             "candidate_rows": len(batch),
             "attempts_written": 0,
         }
@@ -292,19 +350,33 @@ def verify_batch(
     session = _session()
     token = _spotify_token(session)
     provider_functions = _provider_functions(session, providers, token)
+    tie_breaker_functions = _provider_functions(session, tie_breaker_providers, token)
     queried_at = _utc_now()
     attempt_rows: list[tuple[str, ...]] = []
     provider_errors: list[dict[str, str]] = []
+    provider_stats: dict[str, dict[str, object]] = {}
+    tie_breaker_rows = 0
 
     for seed in batch:
-        title = str(seed.get("seed_title") or "")
-        artist = str(seed.get("seed_artist") or "")
+        seed_rows: list[tuple[str, ...]] = []
         for provider_name, provider_fn in provider_functions:
             try:
-                for result in provider_fn(title, artist):
-                    attempt_rows.append(_to_attempt_row(seed, result, queried_at))
+                rows = _run_provider_for_seed(seed, provider_name, provider_fn, queried_at, provider_stats)
+                seed_rows.extend(rows)
+                attempt_rows.extend(rows)
             except requests.RequestException as exc:
                 provider_errors.append({"nyov_id": seed["nyov_id"], "provider": provider_name, "error": str(exc)})
+        if strategy == "tie-breaker" and _is_ambiguous(seed_rows):
+            already_checked = {row[2] for row in seed_rows}
+            for provider_name, provider_fn in tie_breaker_functions:
+                if provider_name in already_checked:
+                    continue
+                try:
+                    rows = _run_provider_for_seed(seed, provider_name, provider_fn, queried_at, provider_stats)
+                    tie_breaker_rows += len(rows)
+                    attempt_rows.extend(rows)
+                except requests.RequestException as exc:
+                    provider_errors.append({"nyov_id": seed["nyov_id"], "provider": provider_name, "error": str(exc)})
 
     with sqlite3.connect(db_path) as conn:
         _insert_attempts(conn, attempt_rows)
@@ -316,9 +388,13 @@ def verify_batch(
         "batch_step": batch_step,
         "batch_limit": batch_limit,
         "providers": [name for name, _ in provider_functions],
+        "strategy": strategy,
+        "tie_breaker_providers": [name for name, _ in tie_breaker_functions],
         "candidate_rows": len(batch),
         "attempts_written": len(attempt_rows),
+        "tie_breaker_attempts_written": tie_breaker_rows,
         "attempts_total": attempts_total,
+        "provider_stats": provider_stats,
         "provider_errors": provider_errors,
     }
 
@@ -331,14 +407,19 @@ def run(
     batch_step: str = "candidate_dual_source_match",
     batch_limit: int = 10,
     providers: str = ",".join(DEFAULT_PROVIDERS),
+    strategy: str = "all",
+    tie_breaker_providers: str = ",".join(DEFAULT_TIE_BREAKER_PROVIDERS),
 ) -> int:
     db_path = (db_path or paths.nyov_db_path).resolve()
     provider_list = [provider.strip() for provider in providers.split(",") if provider.strip()]
+    tie_breaker_provider_list = [provider.strip() for provider in tie_breaker_providers.split(",") if provider.strip()]
     summary = verify_batch(
         db_path,
         batch_step=batch_step,
         batch_limit=batch_limit,
         providers=provider_list,
+        strategy=strategy,
+        tie_breaker_providers=tie_breaker_provider_list,
         write=write,
     )
     print("verify-nyov-batch: dry-run=" + str(not write))

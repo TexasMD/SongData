@@ -341,6 +341,8 @@ def verify_nyov_batch(
     batch_step="candidate_dual_source_match",
     batch_limit=10,
     providers="itunes,musicbrainz,spotify",
+    strategy="all",
+    tie_breaker_providers="spotify",
 ):
     verify_nyov_batch_command.run(
         write=write_enabled,
@@ -349,6 +351,8 @@ def verify_nyov_batch(
         batch_step=batch_step,
         batch_limit=batch_limit,
         providers=providers,
+        strategy=strategy,
+        tie_breaker_providers=tie_breaker_providers,
     )
 
 
@@ -446,6 +450,8 @@ def main():
     parser_verify_nyov.add_argument("--batch-step", default="candidate_dual_source_match")
     parser_verify_nyov.add_argument("--batch-limit", type=int, default=10)
     parser_verify_nyov.add_argument("--providers", default="itunes,musicbrainz,spotify")
+    parser_verify_nyov.add_argument("--strategy", choices=["all", "tie-breaker"], default="all")
+    parser_verify_nyov.add_argument("--tie-breaker-providers", default="spotify")
     parser_nyov_verification_summary = subparsers.add_parser(
         "nyov-verification-summary",
         help="Summarize NYOV provider verification attempts for review",
@@ -515,6 +521,8 @@ def main():
             batch_step=args.batch_step,
             batch_limit=args.batch_limit,
             providers=args.providers,
+            strategy=args.strategy,
+            tie_breaker_providers=args.tie_breaker_providers,
         )
     elif args.command == "nyov-verification-summary":
         nyov_verification_summary(

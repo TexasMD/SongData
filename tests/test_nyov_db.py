@@ -199,6 +199,68 @@ def test_verify_nyov_batch_inserts_provider_attempts(tmp_path, monkeypatch):
     assert row == ("iTunes", "it-1", "matched", "exact")
 
 
+def test_verify_nyov_batch_uses_tie_breaker_only_for_ambiguous_rows(tmp_path, monkeypatch):
+    basket = tmp_path / "basket"
+    seed = basket / "MyMusicBasefiltered_fixed.csv"
+    write_csv(seed, ["Title", "Artist", "Album"], [["Electric Avenue", "Eddy Grant", "Killer On The Rampage"]])
+    write_csv(
+        basket / "spotify.csv",
+        ["Title", "Artist", "Album", "Spotify Track ID"],
+        [["Electric Avenue", "Eddy Grant", "Killer On The Rampage", "sp-local"]],
+    )
+    write_csv(
+        basket / "youtube.csv",
+        ["Title", "Artist", "Album", "Video ID"],
+        [["Electric Avenue", "Eddy Grant", "Killer On The Rampage", "yt-1"]],
+    )
+
+    db_path = tmp_path / "nyov.sqlite"
+    build_nyov_db(paths(tmp_path), seed_csv=seed, basket_dir=basket, output_db=db_path)
+
+    monkeypatch.setattr(verify_nyov_batch, "_session", lambda: object())
+    monkeypatch.setattr(verify_nyov_batch, "_spotify_token", lambda session: "token")
+    monkeypatch.setattr(
+        verify_nyov_batch,
+        "query_itunes",
+        lambda session, title, artist: [
+            ProviderResult("iTunes", "track", "it-1", "https://itunes.example/it-1", "Electric Avenue", "Eddy Grant", "Other Album", "200000", "", {})
+        ],
+    )
+    monkeypatch.setattr(
+        verify_nyov_batch,
+        "query_musicbrainz",
+        lambda session, title, artist: [
+            ProviderResult("MusicBrainz", "recording", "mb-1", "https://musicbrainz.example/mb-1", "Electric Avenue", "Eddy Grant", "Other Album", "200000", "", {})
+        ],
+    )
+    monkeypatch.setattr(
+        verify_nyov_batch,
+        "query_spotify",
+        lambda session, token, title, artist: [
+            ProviderResult("Spotify", "track", "sp-1", "https://spotify.example/sp-1", "Electric Avenue", "Eddy Grant", "Killer On The Rampage", "200000", "ISRC1", {})
+        ],
+    )
+
+    summary = verify_nyov_batch.verify_batch(
+        db_path,
+        batch_limit=1,
+        providers=["itunes", "musicbrainz"],
+        strategy="tie-breaker",
+        tie_breaker_providers=["spotify"],
+        write=True,
+    )
+
+    assert summary["providers"] == ["iTunes", "MusicBrainz"]
+    assert summary["tie_breaker_providers"] == ["Spotify"]
+    assert summary["tie_breaker_attempts_written"] == 1
+    assert summary["provider_stats"]["Spotify"]["matched"] == 1
+    with sqlite3.connect(db_path) as conn:
+        providers = {
+            row[0] for row in conn.execute("SELECT DISTINCT provider FROM nyov_verification_attempts").fetchall()
+        }
+    assert providers == {"iTunes", "MusicBrainz", "Spotify"}
+
+
 def test_nyov_verification_summary_buckets_attempts(tmp_path):
     basket = tmp_path / "basket"
     seed = basket / "MyMusicBasefiltered_fixed.csv"

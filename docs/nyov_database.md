@@ -31,10 +31,17 @@ Provider verification command:
 ```powershell
 python scripts\musicdb.py verify-nyov-batch
 python scripts\musicdb.py --write verify-nyov-batch --batch-step candidate_dual_source_match --batch-limit 10 --providers itunes,musicbrainz,spotify
+python scripts\musicdb.py --write verify-nyov-batch --batch-step candidate_dual_source_match --batch-limit 10 --providers itunes,musicbrainz --strategy tie-breaker --tie-breaker-providers spotify
 ```
 
 `verify-nyov-batch` records provider lookups in `nyov_verification_attempts`.
 It does not promote fields into official MusicDB tables.
+
+Provider strategies:
+
+- `--strategy all`: query every selected provider for every batch row.
+- `--strategy tie-breaker`: query primary `--providers` first, then query
+  `--tie-breaker-providers` only when the primary results are ambiguous.
 
 Verification summary command:
 
