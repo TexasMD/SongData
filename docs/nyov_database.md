@@ -105,6 +105,17 @@ The apply command only applies rows with `patch_action=update_existing` and
 `official_match_status=matched_exact_title_artist`. It creates a timestamped
 backup before writing the selected official CSV.
 
+Clean data patch manifests:
+
+```powershell
+python scripts\musicdb.py apply-data-patches
+python scripts\musicdb.py --write apply-data-patches
+```
+
+Tracked patch manifests live in `data\patches`. They are intentionally small
+and reviewable, while generated exports and full local database files remain
+local unless explicitly promoted.
+
 The write-enabled report creates:
 
 - `data\exports\codex\nyov_report\summary.json`

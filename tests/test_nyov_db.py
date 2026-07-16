@@ -13,6 +13,7 @@ from src.commands.nyov_promotion_review import build_promotion_review
 from src.commands.apply_nyov_promotions import apply_promotions
 from src.commands.export_nyov_official_patch import build_official_patch
 from src.commands.apply_nyov_official_patch import apply_official_patch
+from src.commands.apply_data_patches import apply_data_patches
 
 
 def write_csv(path: Path, headers: list[str], rows: list[list[str]]) -> None:
@@ -948,6 +949,95 @@ def test_apply_nyov_official_patch_skips_stale_current_value(tmp_path):
     assert summary["applied_rows"] == 0
     assert summary["skipped_reasons"]["stale_current_value"] == 1
     assert _read_title(official_csv) == "Kelly Watch the Stars"
+
+
+def test_apply_data_patches_dry_run_and_write_with_backup(tmp_path):
+    root = tmp_path
+    target_csv = root / "SongDB_v2" / "recordings.csv"
+    target_csv.parent.mkdir()
+    write_csv(
+        target_csv,
+        ["Recording ID", "Title", "Artist"],
+        [["R51C96C3D6F48", "Kelly Watch The Stars", "Air"]],
+    )
+    patch_dir = root / "data" / "patches"
+    patch_dir.mkdir(parents=True)
+    patch_file = patch_dir / "kelly.csv"
+    write_csv(
+        patch_file,
+        [
+            "patch_id",
+            "target_file",
+            "match_column",
+            "match_value",
+            "target_column",
+            "old_value",
+            "new_value",
+        ],
+        [[
+            "NYOV-OFFICIAL-20260716-0001",
+            "SongDB_v2/recordings.csv",
+            "Recording ID",
+            "R51C96C3D6F48",
+            "Title",
+            "Kelly Watch The Stars",
+            "Kelly Watch the Stars",
+        ]],
+    )
+    backup_dir = root / "data" / "backups" / "data_patches"
+
+    dry_run = apply_data_patches(root, patch_dir, backup_dir, write=False)
+    assert dry_run["applied_rows"] == 1
+    assert dry_run["already_applied_rows"] == 0
+    assert not backup_dir.exists()
+    assert _read_title(target_csv) == "Kelly Watch The Stars"
+
+    summary = apply_data_patches(root, patch_dir, backup_dir, write=True)
+
+    assert summary["applied_rows"] == 1
+    assert summary["backups"]["SongDB_v2/recordings.csv"]
+    assert Path(summary["backups"]["SongDB_v2/recordings.csv"]).exists()
+    assert _read_title(target_csv) == "Kelly Watch the Stars"
+
+
+def test_apply_data_patches_reports_already_applied(tmp_path):
+    root = tmp_path
+    target_csv = root / "SongDB_v2" / "recordings.csv"
+    target_csv.parent.mkdir()
+    write_csv(
+        target_csv,
+        ["Recording ID", "Title", "Artist"],
+        [["R51C96C3D6F48", "Kelly Watch the Stars", "Air"]],
+    )
+    patch_dir = root / "data" / "patches"
+    patch_dir.mkdir(parents=True)
+    write_csv(
+        patch_dir / "kelly.csv",
+        [
+            "patch_id",
+            "target_file",
+            "match_column",
+            "match_value",
+            "target_column",
+            "old_value",
+            "new_value",
+        ],
+        [[
+            "NYOV-OFFICIAL-20260716-0001",
+            "SongDB_v2/recordings.csv",
+            "Recording ID",
+            "R51C96C3D6F48",
+            "Title",
+            "Kelly Watch The Stars",
+            "Kelly Watch the Stars",
+        ]],
+    )
+
+    summary = apply_data_patches(root, patch_dir, root / "data" / "backups", write=True)
+
+    assert summary["applied_rows"] == 0
+    assert summary["already_applied_rows"] == 1
+    assert summary["backups"] == {}
 
 
 def _read_title(path: Path) -> str:

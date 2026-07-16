@@ -23,6 +23,7 @@ from src.commands import nyov_promotion_review as nyov_promotion_review_command
 from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
 from src.commands import export_nyov_official_patch as export_nyov_official_patch_command
 from src.commands import apply_nyov_official_patch as apply_nyov_official_patch_command
+from src.commands import apply_data_patches as apply_data_patches_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -408,6 +409,16 @@ def apply_nyov_official_patch(write_enabled=False, official_csv=None, patch_csv=
     )
 
 
+def apply_data_patches(write_enabled=False, patch_dir=None, patch_file=None, backup_dir=None):
+    apply_data_patches_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        patch_dir=patch_dir,
+        patch_file=patch_file,
+        backup_dir=backup_dir,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -528,6 +539,13 @@ def main():
     parser_apply_nyov_patch.add_argument("--official-csv", type=Path, default=None)
     parser_apply_nyov_patch.add_argument("--patch-csv", type=Path, default=None)
     parser_apply_nyov_patch.add_argument("--backup-dir", type=Path, default=None)
+    parser_apply_data_patches = subparsers.add_parser(
+        "apply-data-patches",
+        help="Verify or apply tracked data patch manifests with backups",
+    )
+    parser_apply_data_patches.add_argument("--patch-dir", type=Path, default=None)
+    parser_apply_data_patches.add_argument("--patch-file", type=Path, default=None)
+    parser_apply_data_patches.add_argument("--backup-dir", type=Path, default=None)
 
     args = parser.parse_args()
 
@@ -625,6 +643,13 @@ def main():
             write_enabled=args.write,
             official_csv=args.official_csv,
             patch_csv=args.patch_csv,
+            backup_dir=args.backup_dir,
+        )
+    elif args.command == "apply-data-patches":
+        apply_data_patches(
+            write_enabled=args.write,
+            patch_dir=args.patch_dir,
+            patch_file=args.patch_file,
             backup_dir=args.backup_dir,
         )
 
