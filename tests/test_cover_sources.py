@@ -134,6 +134,31 @@ def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
     seen = []
 
     def fake_get(url, params=None, timeout=None):
+        if "/performance/cover-1" in url:
+            return FakeResponse(
+                200,
+                {
+                    "entityType": "performance",
+                    "uri": "https://api.secondhandsongs.com/performance/cover-1",
+                    "title": "Blackbird",
+                    "performer": {"name": "Cover Artist"},
+                    "isOriginal": False,
+                    "originals": [
+                        {
+                            "entityType": "work",
+                            "title": "Blackbird",
+                            "original": {
+                                "entityType": "performance",
+                                "title": "Blackbird",
+                                "performer": {"name": "Original Artist"},
+                                "isOriginal": True,
+                            },
+                        }
+                    ],
+                    "covers": [],
+                },
+                url,
+            )
         seen.append((url, params))
         title = params.get("title", "")
         performer = params.get("performer", "")
@@ -188,6 +213,68 @@ def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
         }
     ]
     assert len(seen) >= 2
+
+
+def test_secondhandsongs_client_extracts_original_detail(monkeypatch):
+    client = SecondHandSongsClient()
+
+    def fake_get(url, params=None, timeout=None):
+        if url.endswith("/search/performance"):
+            return FakeResponse(
+                200,
+                {
+                    "totalResults": 1,
+                    "resultPage": [
+                        {
+                            "entityType": "performance",
+                            "uri": "https://api.secondhandsongs.com/performance/original-1",
+                            "title": "Blackbird",
+                            "performer": {"name": "The Beatles"},
+                            "isOriginal": True,
+                        }
+                    ],
+                    "skippedResults": 0,
+                },
+                f"{url}?page={params.get('page', 0)}",
+            )
+        if "/performance/original-1" in url:
+            return FakeResponse(
+                200,
+                {
+                    "entityType": "performance",
+                    "uri": "https://api.secondhandsongs.com/performance/original-1",
+                    "title": "Blackbird",
+                    "performer": {"name": "The Beatles"},
+                    "isOriginal": True,
+                    "covers": [
+                        {
+                            "entityType": "performance",
+                            "title": "Blackbird",
+                            "performer": {"name": "Eva Cassidy"},
+                        }
+                    ],
+                    "originals": [],
+                },
+                url,
+            )
+        raise AssertionError(url)
+
+    monkeypatch.setattr(client.session, "get", fake_get)
+
+    rows = client.extract_covers("Blackbird", "The Beatles", original_year="1968")
+
+    assert rows == [
+        {
+            "title": "Blackbird",
+            "artist": "Eva Cassidy",
+            "musicbrainz_recording_id": None,
+            "cover_song": "Yes",
+            "original_title": "Blackbird",
+            "original_artist": "The Beatles",
+            "original_year": "1968",
+            "source": "SecondHandSongs",
+        }
+    ]
 
 
 def test_secondhandsongs_client_uses_api_key(monkeypatch):

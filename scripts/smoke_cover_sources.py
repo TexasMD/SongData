@@ -19,6 +19,7 @@ if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
 from src.cover_info_client import scrape_cover_info
+from src.secondhandsongs_client import SecondHandSongsClient
 from src.secondhandsongs_client import scrape_secondhandsongs
 from src.whosampled_client import scrape_whosampled
 
@@ -68,13 +69,16 @@ def run_smoke(title: str, artist: str, year: str, sources: list[str]) -> dict[st
         started_at = _utc_now_iso()
         try:
             rows = SOURCES[source](title, artist, year, callback)
-            source_results[source] = {
+            result: dict[str, Any] = {
                 "status": "ok",
                 "started_at": started_at,
                 "finished_at": _utc_now_iso(),
                 "row_count": len(rows),
                 "sample_rows": rows[:5],
             }
+            if source == "SecondHandSongs":
+                result["diagnostics"] = secondhandsongs_diagnostics(title, artist, callback)
+            source_results[source] = result
         except Exception as exc:  # noqa: BLE001 - smoke test must preserve source-specific failures.
             source_results[source] = {
                 "status": "error",
@@ -90,6 +94,31 @@ def run_smoke(title: str, artist: str, year: str, sources: list[str]) -> dict[st
         "year": year,
         "sources": source_results,
         "source_checks": checks,
+    }
+
+
+def secondhandsongs_diagnostics(
+    title: str,
+    artist: str,
+    callback: Callable[..., None],
+) -> dict[str, Any]:
+    client = SecondHandSongsClient()
+    exact = client.search_performances(title, performer=artist, callback=callback, page_size=25, max_pages=1)
+    broad = client.search_performances(title, callback=callback, page_size=100, max_pages=20)
+    works = client.search_works(title, callback=callback, page_size=100, max_pages=5)
+    detail: dict[str, Any] = {}
+    if exact:
+        detail = client.get_performance(str(exact[0].get("uri") or ""), callback=callback)
+    return {
+        "exact_performance_count": len(exact),
+        "broad_performance_count": len(broad),
+        "work_search_count": len(works),
+        "detail_cover_count": len(detail.get("covers") or []),
+        "detail_original_count": len(detail.get("originals") or []),
+        "known_covers_present": {
+            "Jeff Buckley": any((row.get("performer") or {}).get("name") == "Jeff Buckley" for row in broad),
+            "John Cale": any((row.get("performer") or {}).get("name") == "John Cale" for row in broad),
+        },
     }
 
 

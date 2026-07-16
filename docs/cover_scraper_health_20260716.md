@@ -6,12 +6,20 @@ Live smoke case:
 python scripts\smoke_cover_sources.py --title Hallelujah --artist "Leonard Cohen" --year 1984
 ```
 
+The smoke script now includes SecondHandSongs diagnostics for:
+
+- exact performance search count
+- broad performance search count
+- work search count
+- performance detail cover/original counts
+- known-cover presence checks for Jeff Buckley and John Cale
+
 Observed result:
 
 | Source | Status | Result |
 | --- | --- | --- |
 | `cover.info` | Functional | Returned 210 cover/original relationship rows for `Hallelujah` / `Leonard Cohen`. |
-| `SecondHandSongs` | Functional after API-domain/pagination fix | The dedicated API domain returned 425 exact-title cover/original relationship rows for the same known cover-heavy query. |
+| `SecondHandSongs` | Functional after API-domain/detail fix | The dedicated API domain returned 674 cover/original relationship rows through `/performance/1108` detail for the same known cover-heavy query. |
 | `WhoSampled` | Blocked in current environment | Search requests returned HTTP 403 after backoff attempts. |
 
 SecondHandSongs API access works through `https://api.secondhandsongs.com`.
@@ -32,7 +40,9 @@ Implementation notes:
 - SHS search pages are zero-based.
 - Do not send `format=json` to the dedicated API domain.
 - `pageSize=100` works; larger page sizes returned `400 Bad Request`.
-- For `Hallelujah`, page 8 returned no rows even though `totalResults` reported more results. Treat the current result as complete for the accessible API window, not necessarily complete for the entire SHS database without an issued API key.
+- Prefer `/performance/{id}` detail once the exact source performance is found; detail returned a richer cover family than broad search pages.
+- `search/object` returned server errors in this environment and should not be used as the primary path yet.
+- Repeated broad search calls can return inconsistent windows under SHS limits. Treat detail lookup as the primary source-family result and broad search as diagnostics.
 
 Local parser/update tests still pass:
 
@@ -40,17 +50,21 @@ Local parser/update tests still pass:
 python -m pytest tests\test_cover_sources.py tests\test_cover_updates.py -q
 ```
 
-Result: 6 passed.
+Result: 8 passed.
 
 ## Impression
 
 The existing cover scraping system is tenuous:
 
 - `cover.info` returns complete-looking results today.
-- `SecondHandSongs` returns live API results after using the dedicated API domain and zero-based pagination; deeper completeness may require a real issued key or a different endpoint strategy.
+- `SecondHandSongs` returns live API results after using the dedicated API domain, zero-based pagination, and performance-detail lookup; deeper completeness may still require a real issued key or source-specific review.
 - `WhoSampled` parser coverage exists, but live access is blocked by anti-bot behavior in this environment.
 
 Do not merge PR `#60` or any replacement WhoSampled implementation until it proves equal or better behavior against this smoke test and the existing parser tests.
+
+The current WhoSampled implementation is fragile but intentionally rate-limited
+and parser-tested. Any PR that replaces it must run this smoke script and
+`tests\test_cover_sources.py` before merge.
 
 ## Recommended Next Step
 
