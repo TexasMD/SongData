@@ -1,0 +1,126 @@
+ M .github/ISSUE_TEMPLATE/agent-task.md
+ M .gitignore
+ M AGENT_COORDINATION.md
+ M README.md
+ M SongDB_v2/README.txt
+ M SongDB_v2/external_links.csv
+ M SongDB_v2/manifest.json
+ M SongDB_v2/playlist_membership.csv
+ M SongDB_v2/recordings.csv
+ M SongDB_v2/songs.csv
+ M api/main.py
+ M basket/coverdata_shs_ci.py
+ M data/processed/Main_Song_Database.csv
+ M data/source_registry.csv
+ M data/staging/jules/MusicDB.sqlite
+ M docs/WORKSTREAMS.md
+ M docs/agent_operating_model.md
+ M docs/github_coordination.md
+ M docs/proposed_improvement_plan.md
+ M plan.md
+ M scripts/build_songdb_v2.py
+ M scripts/musicdb.py
+ M src/config.py
+ M src/cover_info_client.py
+ M src/db_access.py
+ M src/normalization.py
+ M src/sqlite_poc.py
+ M src/vibe_search.py
+ M tests/test_cli.py
+ M tests/test_config_and_commands.py
+ M tests/test_db_access_and_vibe.py
+ M tests/test_quality.py
+ M tests/test_repo_safety.py
+?? "basket/needs clen.txt"
+?? basket/reverify_spotify.ps1
+?? basket/reverify_spotify.py
+?? basket/reverify_spotify_parallel.ps1
+?? basket/reverify_spotify_parallel.py
+?? basket/run_coverdata_from_spotify_reverified.ps1
+?? basket/watch_coverdata_status.ps1
+?? basket/whosampled_cover_extractor.py
+?? basket/whosampled_cover_extractor_instructions.md
+?? docs/reference_id_database.md
+?? docs/reorganization_implementation_plan.md
+?? docs/reorganization_inventory/
+?? find_conflicts.ps1
+?? pytest.ini
+?? scripts/cleanup_questionable_rows.py
+?? scripts/normalize_csv_documents.py
+?? scripts/verify_youtube_music_takeout.py
+?? src/commands/build_reference_db.py
+?? src/commands/metadata_audit.py
+?? src/reference_db.py
+?? src/youtube_music_takeout.py
+?? tests/test_api_display_normalization.py
+?? tests/test_display_normalization.py
+?? tests/test_metadata_audit.py
+?? tests/test_normalize_csv_documents.py
+?? tests/test_reference_db.py
+?? tests/test_verify_youtube_music_takeout.py
+?? tests/test_youtube_music_takeout.py
+!! .env
+!! .pytest_cache/
+!! SongDB_v2/youtube_music_takeout_summary.json
+!! SongDB_v2/youtube_music_takeout_unmatched.csv
+!! SongDB_v2/youtube_music_takeout_verification_summary.json
+!! SongDB_v2/youtube_music_takeout_verified.csv
+!! api/__pycache__/
+!! basket/MyMusicBase.xlsx
+!! basket/Song_Data.csv
+!! basket/__pycache__/
+!! basket/coverdata_shs_ci.csv
+!! basket/coverdata_shs_ci.xlsx
+!! basket/coverdata_smoke_test.csv
+!! basket/coverdata_smoke_test.log
+!! basket/coverdata_smoke_test2.csv
+!! basket/coverdata_smoke_test2.log
+!! basket/coverdata_smoke_test2.status.json
+!! basket/listcoversongs.csv
+!! basket/original_songs.csv
+!! basket/original_songs_spotify_reverified.csv
+!! basket/original_songs_verified.csv
+!! basket/questionable.csv
+!! basket/questionable.xlsx
+!! basket/song_list.csv
+!! basket/source_metadata_matrix_expanded.csv
+!! basket/spotify_recheck_test.csv
+!! basket/spotify_reverified_one_row.csv
+!! basket/takeout-20260715T025648Z-1-001.zip
+!! data/exports/codex/encoding_cleaning_test_set.csv
+!! data/exports/codex/manual_review_application_actions.csv
+!! data/exports/codex/metadata_audit/
+!! data/exports/codex/questionable_cleanup/
+!! data/exports/codex/spotify_conflict_track_metadata_cache.csv
+!! data/exports/codex/sqlite_antigravity_review/
+!! data/exports/codex/unicode_normalization/
+!! data/exports/codex/youtube_music_playlist_videos_deduped.csv
+!! data/exports/codex/youtube_music_takeout_songs.csv
+!! data/exports/codex/youtube_music_takeout_unmatched.csv
+!! data/exports/codex/youtube_music_takeout_verification_cache.json
+!! data/exports/codex/youtube_music_takeout_verification_summary.json
+!! data/exports/codex/youtube_music_takeout_verified.csv
+!! data/logs/
+!! data/source_metadata_matrix.csv
+!! data/staging/antigravity/enrichment_status.json
+!! data/staging/codex/antigravity_handoff/
+!! data/staging/codex/antigravity_review_queues/
+!! data/staging/codex/manual_review_decisions.csv
+!! data/staging/jules/Main_Song_Database.csv
+!! data/staging/jules/__pycache__/
+!! data/staging/jules/antigravity_cover_candidates.csv
+!! data/staging/jules/external_links.csv
+!! data/staging/jules/music_antigravity_review.sqlite
+!! data/staging/jules/playlist_membership.csv
+!! data/staging/jules/recordings.csv
+!! data/staging/jules/reference_ids.sqlite
+!! data/staging/jules/songs.csv
+!! data/staging/jules/tag_options.csv
+!! docs/source_metadata_matrix_expanded.csv
+!! frontend/dist/
+!! frontend/node_modules/
+!! scripts/__pycache__/
+!! src/__pycache__/
+!! src/commands/__pycache__/
+!! tests/__pycache__/
+!! tmp/

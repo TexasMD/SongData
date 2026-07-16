@@ -1,20 +1,45 @@
 __pycache__/
 *.pyc
-
-# Database and large files
-*.csv
-*.sqlite
-
-# Backups and exports
-data/backups/
-data/exports/raw/
-
-# Staging
-data/staging/antigravity/
-data/staging/codex/
+.pytest_cache/
 
 # Credentials and environment
 .env
 *.key
 *.token
 *.secret
+
+# Frontend build dependencies and outputs
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+
+# Local private data, generated reports, logs, and temp files
+data/backups/
+data/exports/
+data/logs/
+tmp/
+
+# Staged agent outputs are local review artifacts unless explicitly promoted.
+data/staging/antigravity/
+data/staging/codex/
+data/staging/jules/
+
+# Generated databases and SQLite sidecar files
+data/**/*.sqlite
+data/**/*.sqlite-journal
+data/**/*.sqlite-wal
+data/**/*.sqlite-shm
+
+# Local workbench data and raw imports
+basket/*.csv
+basket/*.xlsx
+basket/*.zip
+basket/*.log
+basket/*.status.json
+
+# Generated MusicDB review artifacts that should stay local
+SongDB_v2/youtube_music_takeout_*.csv
+SongDB_v2/youtube_music_takeout_*.json
+data/source_metadata_matrix.csv
+docs/source_metadata_matrix_expanded.csv

@@ -28,6 +28,9 @@ Jules and Antigravity should produce reviewable artifacts, not active database w
 4. Suggestions must include row identifiers, source, confidence, and rationale.
 5. Generated search links are not verified exact links.
 6. CSV remains the source of truth unless Codex explicitly promotes a new source-of-truth policy.
+7. Any value headed for UI, API output, search text, or external transmission must be display-normalized first.
+8. Broken-encoding source text may be preserved for provenance, but it must not be the canonical rendered value.
+9. Search logic must normalize query text and account for mangled source rows so artifacts do not become undiscoverable.
 
 ## Folder Ownership
 

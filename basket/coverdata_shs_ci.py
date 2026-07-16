@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import sys
+import time
 from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +21,8 @@ from src.cover_info_client import scrape_cover_info
 
 
 OUTPUT_PATH = ROOT / "basket" / "coverdata_shs_ci.csv"
+LOG_PATH = ROOT / "basket" / "coverdata_shs_ci.log"
+HEARTBEAT_PATH = ROOT / "basket" / "coverdata_shs_ci.status.json"
 USER_AGENT = "MusicDB-CoverScraper/1.0 ( Windows )"
 CSV_FIELDNAMES = [
     "performing_artist",
@@ -42,6 +46,22 @@ CSV_FIELDNAMES = [
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def log_line(path: Path, message: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {message}"
+    print(line, flush=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(line + "\n")
+
+
+def write_heartbeat(path: Path, **payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload["updated_at_utc"] = utc_now_iso()
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
+        handle.write("\n")
 
 
 def clean(text: str | None) -> str:
@@ -282,6 +302,7 @@ def shs_resolve_original_performance(
 
 def shs_extract_rows(title: str, artist: str) -> list[dict[str, Any]]:
     session = requests.Session()
+    session.trust_env = False
     session.headers.update({"Accept": "application/json", "User-Agent": USER_AGENT})
 
     performances = shs_search_performances(session, title, artist, page_size=50)
@@ -400,10 +421,20 @@ def dedupe_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(deduped.values())
 
 
-def write_in_batches(rows: list[dict[str, Any]], output_path: Path, batch_size: int = 30) -> None:
+def write_in_batches(
+    rows: list[dict[str, Any]],
+    output_path: Path,
+    *,
+    batch_size: int = 30,
+    log_path: Path | None = None,
+    heartbeat_path: Path | None = None,
+    source_count: int = 0,
+) -> None:
     existing_keys = load_existing_keys(output_path)
     buffer: list[dict[str, Any]] = []
     seen_keys = set(existing_keys)
+    appended = 0
+    total = len(rows)
 
     for row in rows:
         key = (
@@ -418,27 +449,106 @@ def write_in_batches(rows: list[dict[str, Any]], output_path: Path, batch_size: 
         buffer.append(row)
         if len(buffer) >= batch_size:
             append_rows(output_path, buffer)
+            appended += len(buffer)
+            if log_path:
+                log_line(log_path, f"Progress appended={appended}; total_candidates={total}; unique_seen={len(seen_keys)}")
+            if heartbeat_path:
+                write_heartbeat(
+                    heartbeat_path,
+                    state="running",
+                    appended=appended,
+                    total_candidates=total,
+                    unique_seen=len(seen_keys),
+                    output=str(output_path),
+                    source_count=source_count,
+                )
             buffer.clear()
 
     if buffer:
         append_rows(output_path, buffer)
+        appended += len(buffer)
+        if log_path:
+            log_line(log_path, f"Progress appended={appended}; total_candidates={total}; unique_seen={len(seen_keys)}")
+        if heartbeat_path:
+            write_heartbeat(
+                heartbeat_path,
+                state="running",
+                appended=appended,
+                total_candidates=total,
+                unique_seen=len(seen_keys),
+                output=str(output_path),
+                source_count=source_count,
+            )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Scrape cover metadata from cover.info and SecondHandSongs.")
-    parser.add_argument("--title", required=True, help="Song title to search for.")
-    parser.add_argument("--artist", required=True, help="Original artist to search for.")
+    parser.add_argument("--input", type=Path, help="CSV file of songs to process in batch mode.")
+    parser.add_argument("--title", help="Song title to search for.")
+    parser.add_argument("--artist", help="Original artist to search for.")
+    parser.add_argument("--title-column", default="Base Title", help="Title column name when using --input.")
+    parser.add_argument("--artist-column", default="Artist", help="Artist column name when using --input.")
     parser.add_argument(
         "--output",
         default=str(OUTPUT_PATH),
         help="Output CSV path. Defaults to D:\\Music\\MusicDB\\basket\\coverdata_shs_ci.csv",
     )
+    parser.add_argument(
+        "--log",
+        default=str(LOG_PATH),
+        help="Status log path. Defaults to D:\\Music\\MusicDB\\basket\\coverdata_shs_ci.log",
+    )
+    parser.add_argument(
+        "--heartbeat",
+        default=str(HEARTBEAT_PATH),
+        help="Heartbeat JSON path. Defaults to D:\\Music\\MusicDB\\basket\\coverdata_shs_ci.status.json",
+    )
     args = parser.parse_args()
 
     output_path = Path(args.output)
-    rows = cover_info_rows(args.title, args.artist) + shs_extract_rows(args.title, args.artist)
+    log_path = Path(args.log)
+    heartbeat_path = Path(args.heartbeat)
+    songs: list[tuple[str, str]] = []
+    if args.input:
+        seen: set[tuple[str, str]] = set()
+        if log_path:
+            log_line(log_path, f"Start input={args.input} output={output_path}")
+        with args.input.open("r", newline="", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                title = clean(row.get(args.title_column))
+                artist = clean(row.get(args.artist_column))
+                if not title or not artist:
+                    continue
+                key = (normalize(title), normalize(artist))
+                if key in seen:
+                    continue
+                seen.add(key)
+                songs.append((title, artist))
+    else:
+        if not args.title or not args.artist:
+            parser.error("either --input or both --title and --artist are required")
+        songs.append((args.title, args.artist))
+
+    rows: list[dict[str, Any]] = []
+    for title, artist in songs:
+        if log_path:
+            log_line(log_path, f"Query title={title!r} artist={artist!r}")
+        rows.extend(cover_info_rows(title, artist) + shs_extract_rows(title, artist))
     rows = dedupe_rows(rows)
-    write_in_batches(rows, output_path, batch_size=30)
+    write_in_batches(rows, output_path, batch_size=30, log_path=log_path, heartbeat_path=heartbeat_path, source_count=len(songs))
+    if log_path:
+        log_line(log_path, f"Done rows={len(rows)} output={output_path}")
+    if heartbeat_path:
+        write_heartbeat(
+            heartbeat_path,
+            state="done",
+            appended=len(rows),
+            total_candidates=len(rows),
+            unique_seen=len(rows),
+            output=str(output_path),
+            source_count=len(songs),
+        )
 
     print(f"ROWS\t{len(rows)}")
     print(f"OUTPUT\t{output_path}")

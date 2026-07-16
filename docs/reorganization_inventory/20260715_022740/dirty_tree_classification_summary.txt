@@ -1,0 +1,10 @@
+
+Count Name
+----- ----
+   12 generated artifact to ignore
+   37 keep as source/doc/test
+   12 local data to keep outside Git or review before intentional commit
+    1 needs manual review before deciding
+   11 obsolete scratch/workbench candidate to archive or promote intentionally
+
+

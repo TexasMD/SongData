@@ -62,6 +62,7 @@ def _candidate_matches(candidate: dict[str, Any], title: str, artist: str) -> bo
 class CoverInfoClient:
     def __init__(self) -> None:
         self.session = requests.Session()
+        self.session.trust_env = False
         self.session.headers.update({"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
 
     def search_song(

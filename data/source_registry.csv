@@ -1,8 +1,10 @@
 Source,Kind,Credential Required,Credential Environment Variables,Used By,Status,Notes
 Spotify Web API,metadata/verification,Yes,SPOTIFY_CLIENT_ID; SPOTIFY_CLIENT_SECRET,scripts/verification_pass.py; scripts/cleanup_and_verify.py; external Spotify ranker,env_required,"Use for search, track IDs, popularity, key/BPM fields when available. Rotate old exposed credentials."
 iTunes Search API,metadata/verification,No,,scripts/verification_pass.py; scripts/cleanup_and_verify.py,no_secret_required,Public search endpoint.
+YouTube Music,metadata/verification,No,,scripts/youtube_music_takeout.py; scripts/verify_youtube_music_takeout.py,no_secret_required,"Takeout exports plus verification cache; use for playlist membership, track context, and matched metadata."
 Discogs API,metadata/verification,Yes,DISCOGS_TOKEN,scripts/verification_pass.py,env_required,"Use cautiously because matching can be broad; old hardcoded token was removed from MusicDB scripts."
 MusicBrainz API,metadata/verification,No,MUSICBRAINZ_USER_AGENT,scripts/verification_pass.py,user_agent_required,"Use MusicBrainz Recording ID as preferred version-level external ID when verified."
+cover.info,external research links,No,,scripts/cover_daemon.py; scripts/cover_scraper.py,search_links_only,"Use for manual cover verification and relationship hints; keep search-only until a verified page or exact match is confirmed."
 SecondHandSongs,external research links,No,,scripts/build_songdb_v2.py,search_links_only,Generated Google site-search links; verified URL field stays blank until manually checked.
 WhoSampled,external research links,No,,scripts/build_songdb_v2.py,search_links_only,Generated Google site-search links; verified URL field stays blank until manually checked.
 Ultimate Guitar,external tab links,No,,scripts/build_songdb_v2.py,search_links_only,Prefer official tab; otherwise use most popular/highest-rated matching tab.

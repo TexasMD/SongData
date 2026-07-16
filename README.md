@@ -41,4 +41,24 @@ Use this repo to coordinate work between Codex, Antigravity, and Jules:
 - Antigravity: enrichment worker for tags, performance metadata, and external-link verification.
 - Jules: automation, tests, CLI, quality reports, and SQLite prototype.
 
+## Product Goals
+
+The long-term user-facing goals for this project are to:
+
+- import user-approved playlists directly from Spotify, iTunes, Amazon Music, and YouTube Music
+- incorporate those playlists into the database as first-class library data
+- link songs, artists, and albums to the user’s preferred source platform
+- create mood-based, goal-based, event-based, and situation-based playlists
+- suggest music the user does not already have in their history
+- find cover songs and related versions for songs already in the database
+- support creation of the user’s own versions or arrangements of songs they like
+- provide links to lyrics and sheet music or tablature
+- show simplified keyboard guidance for songs
+- show visual pitch or note representations for vocals
+- require double verification of song metadata using at least two reputable sources
+- clean song metadata for font, symbol, and encoding problems
+- retain reference IDs from every source for title, performance, artist, album, and other useful entities
+- determine what metadata each primary source provides, including Spotify, iTunes, YouTube Music, cover.info, MusicBrainz, and Discogs
+- maintain a cleaned, reliable reference-ID database that can be published as a web-reachable source of truth
+
 Start with `docs/COORDINATION.md` and `docs/WORKSTREAMS.md`.

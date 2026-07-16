@@ -58,12 +58,15 @@ def test_is_missing_musician_performance():
     assert _is_missing_musician_performance({"Musician_Guitar": "John Doe"}) is False
 
 
-def test_generate_quality_report(mocker):
+def test_generate_quality_report(monkeypatch):
     # Mock find_duplicates and group_by_version to return simple lists
     # so we don't depend on their full implementation here
-    mocker.patch("src.quality.find_duplicates", return_value=[["Song1", "Song2"]])
-    mocker.patch(
-        "src.quality.group_by_version", return_value={"Group1": ["Song1", "Song2"]}
+    monkeypatch.setattr(
+        "src.quality.find_duplicates", lambda records: [["Song1", "Song2"]]
+    )
+    monkeypatch.setattr(
+        "src.quality.group_by_version",
+        lambda records: {"Group1": ["Song1", "Song2"]},
     )
 
     records = [

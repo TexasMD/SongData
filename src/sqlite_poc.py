@@ -3,6 +3,7 @@ import contextlib
 import os
 from typing import List, Dict, Any
 from .stable_id import generate_stable_id
+from .normalization import normalize_search_text
 
 DB_PATH = "data/staging/jules/MusicDB.sqlite"
 
@@ -19,7 +20,11 @@ def init_db(db_path: str = DB_PATH):
                     recording_id TEXT PRIMARY KEY,
                     song_id TEXT NOT NULL,
                     title TEXT NOT NULL,
+                    title_search TEXT NOT NULL,
                     artist TEXT NOT NULL,
+                    artist_search TEXT NOT NULL,
+                    album TEXT,
+                    album_search TEXT,
                     version TEXT,
                     spotify_track_id TEXT,
                     musicbrainz_id TEXT,
@@ -110,6 +115,7 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
             for record in records:
                 title = record.get("Title", "")
                 artist = record.get("Artist", "")
+                album = record.get("Album", "")
                 version = record.get("Version", "")
 
                 recording_id = record.get("Recording ID") or generate_stable_id(
@@ -121,7 +127,11 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
                     recording_id,
                     song_id,
                     title,
+                    normalize_search_text(title),
                     artist,
+                    normalize_search_text(artist),
+                    album,
+                    normalize_search_text(album),
                     version,
                     record.get("Spotify Track ID"),
                     record.get("MusicBrainz ID"),
@@ -160,8 +170,8 @@ def insert_v2_records(records: List[Dict[str, Any]], db_path: str = DB_PATH):
 
             # Recordings
             cursor.executemany('''
-                INSERT OR REPLACE INTO recordings (recording_id, song_id, title, artist, version, spotify_track_id, musicbrainz_id, isrc)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO recordings (recording_id, song_id, title, title_search, artist, artist_search, album, album_search, version, spotify_track_id, musicbrainz_id, isrc)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', recordings_data)
 
             # External Links
