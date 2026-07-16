@@ -14,6 +14,14 @@ Observed result:
 | `SecondHandSongs` | Not currently useful through this client | Current `search/performance?format=json` calls returned 0 rows for the same known cover-heavy query. |
 | `WhoSampled` | Blocked in current environment | Search requests returned HTTP 403 after backoff attempts. |
 
+SecondHandSongs supports an optional API key via:
+
+```powershell
+$env:SECONDHANDSONGS_API_KEY = "<your key>"
+```
+
+The client sends this as `X-API-Key` when present. Do not commit the key.
+
 Local parser/update tests still pass:
 
 ```powershell

@@ -190,6 +190,14 @@ def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
     assert len(seen) >= 2
 
 
+def test_secondhandsongs_client_uses_api_key(monkeypatch):
+    monkeypatch.setenv("SECONDHANDSONGS_API_KEY", "test-shs-key")
+
+    client = SecondHandSongsClient()
+
+    assert client.session.headers["X-API-Key"] == "test-shs-key"
+
+
 def test_whosampled_parser_handles_track_connections():
     client = WhoSampledClient()
     html = """

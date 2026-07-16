@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import logging
+import os
 import re
 from typing import Any, Callable
 
@@ -41,11 +42,14 @@ def _normalize_artist(text: str | None) -> str:
 
 
 class SecondHandSongsClient:
-    def __init__(self) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.session = cloudscraper.create_scraper(
             browser={"browser": "chrome", "platform": "windows", "mobile": False}
         )
         self.session.headers.update({"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
+        api_key = api_key or os.environ.get("SECONDHANDSONGS_API_KEY", "")
+        if api_key:
+            self.session.headers.update({"X-API-Key": api_key})
 
     def _search_page(
         self,
