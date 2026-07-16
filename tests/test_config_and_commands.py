@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
-from src.commands import build_v2, quality_report
+from src.commands import build_nyov_db, build_v2, quality_report
 from src.config import paths
 
 
@@ -35,6 +35,7 @@ class TestConfigAndCommands(unittest.TestCase):
         self.assertEqual(configured.recordings_csv, root.resolve() / "SongDB_v2" / "recordings.csv")
         self.assertEqual(configured.sqlite_poc_path, root.resolve() / "data" / "staging" / "jules" / "poc.sqlite")
         self.assertEqual(configured.reference_db_path, root.resolve() / "data" / "staging" / "jules" / "reference_ids.sqlite")
+        self.assertEqual(configured.nyov_db_path, root.resolve() / "data" / "staging" / "codex" / "nyov.sqlite")
 
     def test_build_v2_dry_run_does_not_call_subprocess(self):
         root = make_temp_root()
@@ -85,6 +86,17 @@ class TestConfigAndCommands(unittest.TestCase):
         self.assertEqual(report["missing_musicbrainz_ids"], 2)
         self.assertEqual(report["missing_bpm"], 2)
         self.assertEqual(report["missing_key"], 1)
+
+    def test_build_nyov_db_dry_run(self):
+        root = make_temp_root()
+        configured = paths(root)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = build_nyov_db.run(write=False, paths=configured)
+
+        self.assertEqual(rc, 0)
+        self.assertIn("build-nyov-db: dry-run=True", output.getvalue())
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ from src.sqlite_poc import insert_v2_records, DB_PATH
 from src.utils import backup_file, read_csv
 from src.commands import build_reference_db as reference_db_command
 from src.commands import metadata_audit as metadata_audit_command
+from src.commands import build_nyov_db as nyov_db_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -302,6 +303,16 @@ def metadata_audit_main(write_enabled=False):
     )
 
 
+def build_nyov_db(write_enabled=False, seed_csv=None, basket_dir=None, output_db=None):
+    nyov_db_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        seed_csv=seed_csv,
+        basket_dir=basket_dir,
+        output_db=output_db,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -363,6 +374,13 @@ def main():
         "metadata-audit-main",
         help="Audit the active compatibility CSV for dual-source verification and normalization incidents",
     )
+    parser_nyov = subparsers.add_parser(
+        "build-nyov-db",
+        help="Build the not-yet-officially-verified local evidence database",
+    )
+    parser_nyov.add_argument("--seed-csv", type=Path, default=None)
+    parser_nyov.add_argument("--basket-dir", type=Path, default=None)
+    parser_nyov.add_argument("--output-db", type=Path, default=None)
 
     args = parser.parse_args()
 
@@ -403,6 +421,13 @@ def main():
         metadata_audit(write_enabled=args.write)
     elif args.command == "metadata-audit-main":
         metadata_audit_main(write_enabled=args.write)
+    elif args.command == "build-nyov-db":
+        build_nyov_db(
+            write_enabled=args.write,
+            seed_csv=args.seed_csv,
+            basket_dir=args.basket_dir,
+            output_db=args.output_db,
+        )
 
 
 

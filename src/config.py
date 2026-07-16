@@ -21,6 +21,7 @@ class MusicDBPaths:
     root: Path
     scripts_dir: Path
     data_dir: Path
+    basket_dir: Path
     active_main_csv: Path
     songdb_v2_dir: Path
     recordings_csv: Path
@@ -32,6 +33,7 @@ class MusicDBPaths:
     backups_dir: Path
     sqlite_poc_path: Path
     reference_db_path: Path
+    nyov_db_path: Path
 
 
 def paths(root: Path | None = None) -> MusicDBPaths:
@@ -42,6 +44,7 @@ def paths(root: Path | None = None) -> MusicDBPaths:
         root=root,
         scripts_dir=root / "scripts",
         data_dir=data_dir,
+        basket_dir=root / "basket",
         active_main_csv=data_dir / "processed" / "Main_Song_Database.csv",
         songdb_v2_dir=songdb_v2_dir,
         recordings_csv=songdb_v2_dir / "recordings.csv",
@@ -53,6 +56,7 @@ def paths(root: Path | None = None) -> MusicDBPaths:
         backups_dir=data_dir / "backups",
         sqlite_poc_path=data_dir / "staging" / "jules" / "poc.sqlite",
         reference_db_path=data_dir / "staging" / "jules" / "reference_ids.sqlite",
+        nyov_db_path=data_dir / "staging" / "codex" / "nyov.sqlite",
     )
 
 
