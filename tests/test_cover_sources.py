@@ -435,6 +435,97 @@ def test_scrape_covers_retries_empty_sources_when_peer_has_many_results(monkeypa
     assert ("SecondHandSongs", "cross_source_empty_retry", "internal://cross-source-empty-retry", 1) == checks[-2][:4]
 
 
+def test_scrape_covers_always_attempts_all_three_relationship_sources(monkeypatch):
+    monkeypatch.setattr(cover_scraper, "fetch_work_id_for_recording", lambda *args, **kwargs: None)
+    calls = []
+
+    def fake_cover_info(*args, **kwargs):
+        calls.append("cover.info")
+        return [
+            {
+                "title": "Song",
+                "artist": "Cover Info Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "cover.info",
+            }
+        ]
+
+    def fake_secondhandsongs(*args, **kwargs):
+        calls.append("SecondHandSongs")
+        return [
+            {
+                "title": "Song",
+                "artist": "SHS Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "SecondHandSongs",
+            }
+        ]
+
+    def fake_whosampled(*args, **kwargs):
+        calls.append("WhoSampled")
+        return [
+            {
+                "title": "Song",
+                "artist": "WhoSampled Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "WhoSampled",
+            }
+        ]
+
+    monkeypatch.setattr(cover_scraper, "scrape_cover_info", fake_cover_info)
+    monkeypatch.setattr(cover_scraper, "scrape_secondhandsongs", fake_secondhandsongs)
+    monkeypatch.setattr(cover_scraper, "scrape_whosampled", fake_whosampled)
+
+    rows = cover_scraper.scrape_covers("Song", "Artist", "2000")
+
+    assert calls == ["cover.info", "SecondHandSongs", "WhoSampled"]
+    assert {row["source"] for row in rows} == {"cover.info", "SecondHandSongs", "WhoSampled"}
+
+
+def test_scrape_covers_continues_when_relationship_source_errors(monkeypatch):
+    monkeypatch.setattr(cover_scraper, "fetch_work_id_for_recording", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        cover_scraper,
+        "scrape_cover_info",
+        lambda *args, **kwargs: [
+            {
+                "title": "Song",
+                "artist": "Cover Info Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "cover.info",
+            }
+        ],
+    )
+
+    def broken_secondhandsongs(*args, **kwargs):
+        raise RuntimeError("temporary SHS failure")
+
+    monkeypatch.setattr(cover_scraper, "scrape_secondhandsongs", broken_secondhandsongs)
+    monkeypatch.setattr(
+        cover_scraper,
+        "scrape_whosampled",
+        lambda *args, **kwargs: [
+            {
+                "title": "Song",
+                "artist": "WhoSampled Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "WhoSampled",
+            }
+        ],
+    )
+    checks = []
+
+    rows = cover_scraper.scrape_covers("Song", "Artist", "2000", on_source_checked=lambda *args: checks.append(args))
+
+    assert {row["source"] for row in rows} == {"cover.info", "WhoSampled"}
+    assert any(check[:4] == ("SecondHandSongs", "source_error", "internal://source-error/SecondHandSongs", 0) for check in checks)
+
+
 def test_whosampled_parser_handles_track_connections():
     client = WhoSampledClient()
     html = """

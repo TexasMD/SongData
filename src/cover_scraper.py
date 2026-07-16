@@ -25,6 +25,7 @@ BROWSER_USER_AGENTS = [
 SourceCheckCallback = Callable[[str, str, str, int | None, str], None]
 SourceScrapeFn = Callable[[str, str, str, SourceCheckCallback | None], list[dict]]
 CROSS_SOURCE_EMPTY_RETRY_THRESHOLD = 10
+RELATIONSHIP_COVER_SOURCES = ("cover.info", "SecondHandSongs", "WhoSampled")
 
 def get_random_headers():
     return {
@@ -216,7 +217,14 @@ def _retry_suspicious_empty_sources(
     for source, rows in list(source_rows.items()):
         if rows:
             continue
-        retry_rows = source_fns[source](title, artist, original_year, on_source_checked)
+        retry_rows = _scrape_source(
+            source,
+            source_fns[source],
+            title,
+            artist,
+            original_year,
+            on_source_checked,
+        )
         source_rows[source] = retry_rows
         _emit_checked(
             on_source_checked,
@@ -226,13 +234,40 @@ def _retry_suspicious_empty_sources(
             result_count=len(retry_rows),
         )
 
+
+def _scrape_source(
+    source: str,
+    scrape_fn: SourceScrapeFn,
+    title: str,
+    artist: str,
+    original_year: str,
+    on_source_checked: SourceCheckCallback | None,
+) -> list[dict]:
+    try:
+        return scrape_fn(title, artist, original_year, on_source_checked)
+    except Exception as exc:  # noqa: BLE001 - keep other cover sources running.
+        logger.exception("Cover source %s failed for %s by %s", source, title, artist)
+        _emit_checked(
+            on_source_checked,
+            source=source,
+            query_kind="source_error",
+            query_url=f"internal://source-error/{source}",
+            result_count=0,
+        )
+        return []
+
+
 def scrape_covers(
     title: str,
     artist: str,
     original_year: str = "",
     on_source_checked: SourceCheckCallback | None = None,
 ) -> list:
-    """End-to-end function to scrape cover songs from all sources and deduplicate."""
+    """Scrape covers from all relationship sources and deduplicate.
+
+    cover.info, SecondHandSongs, and WhoSampled are always attempted. MusicBrainz
+    is an additional open relationship source, not a substitute for those three.
+    """
     source_fns: dict[str, SourceScrapeFn] = {
         "MusicBrainz": _scrape_musicbrainz,
         "cover.info": _scrape_cover_info_source,
@@ -240,7 +275,7 @@ def scrape_covers(
         "WhoSampled": scrape_whosampled,
     }
     source_rows = {
-        source: scrape_fn(title, artist, original_year, on_source_checked)
+        source: _scrape_source(source, scrape_fn, title, artist, original_year, on_source_checked)
         for source, scrape_fn in source_fns.items()
     }
     _retry_suspicious_empty_sources(source_rows, source_fns, title, artist, original_year, on_source_checked)

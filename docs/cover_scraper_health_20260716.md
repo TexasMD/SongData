@@ -18,6 +18,16 @@ It also treats a zero-row source as suspicious when another checked source
 returns at least 10 rows. In that case, the empty source gets one retry and is
 marked `suspicious_empty_after_retry` if it still returns nothing.
 
+When cover songs are sought by the application pipeline, all three relationship
+sources must be attempted every time:
+
+- `cover.info`
+- `SecondHandSongs`
+- `WhoSampled`
+
+MusicBrainz work relationships are useful additional evidence, but they are not
+a substitute for the three-source relationship pass.
+
 Observed result:
 
 | Source | Status | Result |
@@ -60,6 +70,9 @@ Implementation notes:
 - Derive smoke diagnostics from the scrape run's own source checks. Immediate duplicate SHS calls can return inconsistent windows under rate limits and make a healthy scrape look empty.
 - `search/object` returned server errors in this environment and should not be used as the primary path yet.
 - Repeated broad search calls can return inconsistent windows under SHS limits. Treat detail lookup as the primary source-family result and broad search as diagnostics.
+- Do not short-circuit cover seeking after the first successful source. Query
+  `cover.info`, `SecondHandSongs`, and `WhoSampled` on every application cover
+  update and keep per-source query evidence.
 
 Local parser/update tests still pass:
 

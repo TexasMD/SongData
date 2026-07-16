@@ -54,6 +54,12 @@ These sources should be treated as high-confidence for relationship facts only.
 They do not automatically verify foundational recording identity fields such as
 album, release date, duration, ISRC, or provider track IDs.
 
+Whenever MusicDB seeks cover-song relationships for a recording, it should query
+all three relationship sources: `cover.info`, `SecondHandSongs`, and
+`WhoSampled`. One successful source is supporting evidence, not a reason to skip
+the other two. MusicBrainz work relationships can be queried as an additional
+open-data source, but should not replace the three relationship sources.
+
 ## Foundational Field Promotion
 
 Foundational fields include title, artist, album, track number, release date,
