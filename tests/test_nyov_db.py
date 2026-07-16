@@ -209,6 +209,7 @@ def test_nyov_verification_summary_buckets_attempts(tmp_path):
             ["Electric Avenue", "Eddy Grant", "Killer On The Rampage"],
             ["Song B", "Artist B", "Album B"],
             ["Song C", "Artist C", "Album C"],
+            ["Song D", "Artist D", "Album D"],
         ],
     )
     db_path = tmp_path / "nyov.sqlite"
@@ -312,6 +313,29 @@ def test_nyov_verification_summary_buckets_attempts(tmp_path):
                 "test",
                 "",
             ),
+            (
+                "d1",
+                ids["Song D"],
+                "iTunes",
+                "track",
+                "it-d",
+                "https://itunes.example/it-d",
+                "Different Song",
+                "Artist D",
+                "Album D",
+                "2026-07-16T00:00:00Z",
+                "{}",
+                "needs_review",
+                0.75,
+                "different",
+                "exact",
+                "exact",
+                "not_checked",
+                "not_checked",
+                "test",
+                "test",
+                "",
+            ),
         ]
         conn.executemany(
             """
@@ -331,3 +355,4 @@ def test_nyov_verification_summary_buckets_attempts(tmp_path):
     assert buckets["review_candidate_strong_identity"] == 1
     assert buckets["conflict_album_only"] == 1
     assert buckets["conflict_identity"] == 1
+    assert buckets["insufficient_match"] == 1

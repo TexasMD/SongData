@@ -34,9 +34,9 @@ def _fetch_entity_summary(conn: sqlite3.Connection) -> list[dict[str, Any]]:
                 SUM(CASE WHEN match_status = 'matched' THEN 1 ELSE 0 END) AS matched_attempts,
                 SUM(CASE WHEN match_status = 'needs_review' THEN 1 ELSE 0 END) AS needs_review_attempts,
                 SUM(CASE WHEN match_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_attempts,
-                SUM(CASE WHEN title_match_status = 'different' THEN 1 ELSE 0 END) AS title_conflicts,
-                SUM(CASE WHEN artist_match_status = 'different' THEN 1 ELSE 0 END) AS artist_conflicts,
-                SUM(CASE WHEN album_match_status = 'different' THEN 1 ELSE 0 END) AS album_conflicts,
+                SUM(CASE WHEN match_status IN ('matched', 'needs_review') AND title_match_status = 'different' THEN 1 ELSE 0 END) AS title_conflicts,
+                SUM(CASE WHEN match_status IN ('matched', 'needs_review') AND artist_match_status = 'different' THEN 1 ELSE 0 END) AS artist_conflicts,
+                SUM(CASE WHEN match_status IN ('matched', 'needs_review') AND album_match_status = 'different' THEN 1 ELSE 0 END) AS album_conflicts,
                 MAX(CAST(match_score AS REAL)) AS best_match_score,
                 GROUP_CONCAT(DISTINCT provider) AS providers_checked
             FROM nyov_verification_attempts
