@@ -26,6 +26,15 @@ python -m pytest tests\test_api_display_normalization.py tests\test_db_access_an
    Add a Windows-friendly launcher that starts the FastAPI API, serves the built
    frontend, and opens the local UI in the browser.
 
+   Current command:
+
+   ```powershell
+   cd frontend
+   npm run build
+   cd ..
+   python scripts\launch_musicdb_app.py
+   ```
+
 2. **Read-only app mode**
    Keep the first `.exe` read-only for browsing, filtering, vibe search, and
    cover-source smoke checks. Route writes through patch manifests.
@@ -33,6 +42,13 @@ python -m pytest tests\test_api_display_normalization.py tests\test_db_access_an
 3. **Bundled static frontend**
    Build `frontend/dist` and serve it from FastAPI so the app has one local web
    surface instead of separate Vite and API processes.
+
+   Current app URL: `http://127.0.0.1:8000/app`
+
+   Verified local server check:
+
+   - `/` health endpoint returned `200`.
+   - `/app/` served `frontend/dist/index.html`.
 
 4. **PyInstaller prototype**
    Package the Python API/launcher with PyInstaller. Keep data files external

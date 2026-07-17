@@ -24,6 +24,8 @@ from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
 from src.commands import export_nyov_official_patch as export_nyov_official_patch_command
 from src.commands import apply_nyov_official_patch as apply_nyov_official_patch_command
 from src.commands import apply_data_patches as apply_data_patches_command
+from src.commands import import_msd_secondhand as import_msd_secondhand_command
+from src.commands import enrich_msd_secondhand_review as enrich_msd_secondhand_review_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -419,6 +421,16 @@ def apply_data_patches(write_enabled=False, patch_dir=None, patch_file=None, bac
     )
 
 
+def import_msd_secondhand(write_enabled=False, input_dir=None, output_dir=None, track_metadata_db=None):
+    import_msd_secondhand_command.run(
+        write=write_enabled,
+        paths=musicdb_paths(),
+        input_dir=input_dir,
+        output_dir=output_dir,
+        track_metadata_db=track_metadata_db,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MusicDB CLI")
     parser.add_argument(
@@ -546,6 +558,24 @@ def main():
     parser_apply_data_patches.add_argument("--patch-dir", type=Path, default=None)
     parser_apply_data_patches.add_argument("--patch-file", type=Path, default=None)
     parser_apply_data_patches.add_argument("--backup-dir", type=Path, default=None)
+    parser_import_msd_shs = subparsers.add_parser(
+        "import-msd-secondhand",
+        help="Import the Million Song Dataset SecondHandSongs subset into staged CSV/SQLite outputs",
+    )
+    parser_import_msd_shs.add_argument("--input-dir", type=Path, default=None)
+    parser_import_msd_shs.add_argument("--output-dir", type=Path, default=None)
+    parser_import_msd_shs.add_argument("--track-metadata-db", type=Path, default=None)
+
+    parser_enrich_msd_shs_review = subparsers.add_parser(
+        "enrich-msd-secondhand-review",
+        help="Enrich MSD SecondHandSongs missing-performance review rows using WhoSampled evidence",
+    )
+    parser_enrich_msd_shs_review.add_argument(
+        "--sources", default="WhoSampled", help="Comma-separated sources to check"
+    )
+    parser_enrich_msd_shs_review.add_argument(
+        "--output-csv", type=Path, default=Path("data/staging/codex/msd_secondhand/msd_shs_missing_performance_whosampled_full.csv")
+    )
 
     args = parser.parse_args()
 
@@ -651,6 +681,20 @@ def main():
             patch_dir=args.patch_dir,
             patch_file=args.patch_file,
             backup_dir=args.backup_dir,
+        )
+    elif args.command == "import-msd-secondhand":
+        import_msd_secondhand(
+            write_enabled=args.write,
+            input_dir=args.input_dir,
+            output_dir=args.output_dir,
+            track_metadata_db=args.track_metadata_db,
+        )
+    elif args.command == "enrich-msd-secondhand-review":
+        enrich_msd_secondhand_review_command.run(
+            write_enabled=args.write,
+            review_csv=Path("data/staging/codex/msd_secondhand/msd_shs_musicdb_connection_review.csv"),
+            sources=args.sources,
+            output_csv=args.output_csv,
         )
 
 

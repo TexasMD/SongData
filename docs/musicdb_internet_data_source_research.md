@@ -169,16 +169,61 @@ Use for:
 - Echo Nest-era audio analysis
 - tempo/key/time signature candidates
 - Last.fm tag joins
+- SecondHandSongs cover-clique joins through the official MSD SHS subset
 
 Fit:
 
 - Valuable if matched by artist/title/track ID.
 - Older catalog coverage is good; modern tracks are weaker.
+- The SHS subset is especially useful as a bulk relationship backbone because
+  it groups MSD track IDs into cover-version cliques and preserves SHS work and
+  performance identifiers where available.
 
 Links:
 
 - http://millionsongdataset.com/
 - http://millionsongdataset.com/pages/getting-dataset/
+- http://millionsongdataset.com/secondhand/
+
+Repo import:
+
+```powershell
+python scripts\musicdb.py --write import-msd-secondhand
+```
+
+Default local outputs:
+
+- `data\staging\codex\msd_secondhand\msd_shs_cliques.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_performances.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_connections.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_track_metadata.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_musicdb_matches.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_musicdb_connections.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_musicdb_connection_review.csv`
+- `data\staging\codex\msd_secondhand\msd_secondhand.sqlite`
+
+The subset stores MSD track IDs, MSD artist IDs, SHS work IDs, and SHS
+performance IDs. It does not by itself include full readable artist/title
+metadata for every track, so the next crosswalk should join those MSD track IDs
+to an MSD metadata source before promoting local MusicDB cover candidates.
+
+The importer enriches the subset when the MSD `track_metadata.db` additional
+file is present at:
+
+- `data\staging\external\million_song\track_metadata.db`
+
+The official metadata DB provides one million `songs` rows with `track_id`,
+`title`, `artist_name`, `release`, `year`, and related IDs. On the 2026-07-16
+run, the importer enriched all 18,196 SHS subset performances, found 482 exact
+normalized title/artist matches to local MusicDB recordings, and staged 63
+same-clique MusicDB connection candidates for review. These are candidates, not
+official relationship promotions.
+
+The review export places both candidate recordings side by side and includes
+`review_status`, `review_notes`, and `review_flags` columns. On the same run,
+28 of the 63 candidates had no automatic warning flags; the remaining rows were
+flagged for missing SHS performance URLs, same-artist ambiguity, ambiguous local
+matches, or multiple MSD matches to one local recording.
 
 ### Last.fm Datasets / LFM-1b
 
@@ -268,8 +313,11 @@ Use for:
 
 Fit:
 
-- Very valuable but access/licensing are restrictive.
-- Treat as manual verification unless an approved API/data route exists.
+- High-confidence relationship source for samples, covers, and remixes when
+  an exact matched page or parsed relationship is captured.
+- Access/licensing are restrictive, and live scraping may be blocked. Treat
+  generated search links as leads only; promote exact relationship evidence
+  after review or approved parser/API access.
 
 Links:
 
@@ -363,7 +411,8 @@ Links:
 
 - AllMusic: excellent editorial metadata, but no general public data export.
 - Rate Your Music: useful human genre consensus, but no official public API for bulk import.
-- WhoSampled: high value, but access constraints.
+- WhoSampled: high value and reliable for exact relationship evidence, but
+  access constraints require careful verification and conservative automation.
 - Ultimate Guitar: high value for tabs, but verify manually and respect terms.
 - Random GitHub/Kaggle Spotify dumps: inspect licensing and provenance first.
 
