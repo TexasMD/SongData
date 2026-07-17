@@ -164,11 +164,31 @@ def test_build_import_enriches_metadata_and_musicdb_matches(tmp_path: Path):
     assert summary["metadata_enriched_count"] == 2
     assert summary["musicdb_match_count"] == 2
     assert summary["musicdb_connection_count"] == 1
+    assert summary["musicdb_connection_review_count"] == 1
+    assert (output_dir / "msd_shs_musicdb_connection_review.csv").exists()
     with sqlite3.connect(output_dir / "msd_secondhand.sqlite") as conn:
         match_count = conn.execute("SELECT COUNT(*) FROM msd_shs_musicdb_matches").fetchone()[0]
         connection = conn.execute(
             "SELECT left_recording_id, right_recording_id FROM msd_shs_musicdb_connections"
         ).fetchone()
+        review = conn.execute(
+            """
+            SELECT
+                left_musicdb_title,
+                left_shs_performance_url,
+                right_musicdb_title,
+                right_shs_performance_url,
+                review_flags
+            FROM msd_shs_musicdb_connection_review
+            """
+        ).fetchone()
 
     assert match_count == 2
     assert connection == ("R1", "R2")
+    assert review == (
+        "Shared Song",
+        "https://secondhandsongs.com/performance/101",
+        "Shared Song",
+        "https://secondhandsongs.com/performance/102",
+        "",
+    )

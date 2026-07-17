@@ -410,6 +410,95 @@ def musicdb_connection_rows(match_rows: list[dict[str, object]]) -> list[dict[st
     return rows
 
 
+def _first_by_recording(match_rows: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    rows: dict[str, dict[str, object]] = {}
+    for row in match_rows:
+        recording_id = str(row.get("recording_id") or "")
+        if recording_id and recording_id not in rows:
+            rows[recording_id] = row
+    return rows
+
+
+def _confidence_counts(match_rows: list[dict[str, object]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in match_rows:
+        recording_id = str(row.get("recording_id") or "")
+        if recording_id:
+            counts[recording_id] = counts.get(recording_id, 0) + 1
+    return counts
+
+
+def _review_flags(
+    connection: dict[str, object],
+    left: dict[str, object],
+    right: dict[str, object],
+    match_counts: dict[str, int],
+) -> str:
+    flags: list[str] = []
+    left_id = str(connection.get("left_recording_id") or "")
+    right_id = str(connection.get("right_recording_id") or "")
+    if left_id == right_id:
+        flags.append("same_recording")
+    if match_counts.get(left_id, 0) > 1 or match_counts.get(right_id, 0) > 1:
+        flags.append("multiple_msd_matches_for_recording")
+    if not left.get("shs_performance_url") or not right.get("shs_performance_url"):
+        flags.append("missing_shs_performance_url")
+    if normalize_search_text(str(left.get("musicdb_artist") or "")) == normalize_search_text(
+        str(right.get("musicdb_artist") or "")
+    ):
+        flags.append("same_artist")
+    if left.get("match_confidence") != "exact_normalized_title_artist" or right.get("match_confidence") != "exact_normalized_title_artist":
+        flags.append("ambiguous_match")
+    return ";".join(flags)
+
+
+def musicdb_connection_review_rows(
+    connection_candidates: list[dict[str, object]],
+    match_rows: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    match_by_recording = _first_by_recording(match_rows)
+    match_counts = _confidence_counts(match_rows)
+    rows = []
+
+    for connection in connection_candidates:
+        left_id = str(connection.get("left_recording_id") or "")
+        right_id = str(connection.get("right_recording_id") or "")
+        left = match_by_recording.get(left_id, {})
+        right = match_by_recording.get(right_id, {})
+        rows.append(
+            {
+                "review_status": "pending",
+                "review_notes": "",
+                "review_flags": _review_flags(connection, left, right, match_counts),
+                "clique_id": connection.get("clique_id", ""),
+                "clique_title": connection.get("clique_title", ""),
+                "relationship_type": connection.get("relationship_type", ""),
+                "candidate_confidence": connection.get("confidence", ""),
+                "left_recording_id": left_id,
+                "left_song_id": left.get("song_id", ""),
+                "left_musicdb_title": left.get("musicdb_title", ""),
+                "left_musicdb_artist": left.get("musicdb_artist", ""),
+                "left_msd_track_id": left.get("msd_track_id", ""),
+                "left_msd_title": left.get("msd_title", ""),
+                "left_msd_artist": left.get("msd_artist", ""),
+                "left_shs_performance_id": left.get("shs_performance_id", ""),
+                "left_shs_performance_url": left.get("shs_performance_url", ""),
+                "right_recording_id": right_id,
+                "right_song_id": right.get("song_id", ""),
+                "right_musicdb_title": right.get("musicdb_title", ""),
+                "right_musicdb_artist": right.get("musicdb_artist", ""),
+                "right_msd_track_id": right.get("msd_track_id", ""),
+                "right_msd_title": right.get("msd_title", ""),
+                "right_msd_artist": right.get("msd_artist", ""),
+                "right_shs_performance_id": right.get("shs_performance_id", ""),
+                "right_shs_performance_url": right.get("shs_performance_url", ""),
+                "shs_work_ids": left.get("shs_work_ids") or right.get("shs_work_ids", ""),
+                "source": SOURCE_NAME,
+            }
+        )
+    return rows
+
+
 def _write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str] | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = fieldnames or (list(rows[0].keys()) if rows else [])
@@ -520,6 +609,7 @@ def add_metadata_outputs(
     metadata_csv = output_dir / "msd_shs_track_metadata.csv"
     matches_csv = output_dir / "msd_shs_musicdb_matches.csv"
     musicdb_connections_csv = output_dir / "msd_shs_musicdb_connections.csv"
+    musicdb_review_csv = output_dir / "msd_shs_musicdb_connection_review.csv"
     sqlite_path = Path(str(summary["outputs"]["sqlite"]))
     match_columns = [
         "recording_id",
@@ -546,15 +636,47 @@ def add_metadata_outputs(
         "confidence",
         "source",
     ]
+    review_columns = [
+        "review_status",
+        "review_notes",
+        "review_flags",
+        "clique_id",
+        "clique_title",
+        "relationship_type",
+        "candidate_confidence",
+        "left_recording_id",
+        "left_song_id",
+        "left_musicdb_title",
+        "left_musicdb_artist",
+        "left_msd_track_id",
+        "left_msd_title",
+        "left_msd_artist",
+        "left_shs_performance_id",
+        "left_shs_performance_url",
+        "right_recording_id",
+        "right_song_id",
+        "right_musicdb_title",
+        "right_musicdb_artist",
+        "right_msd_track_id",
+        "right_msd_title",
+        "right_msd_artist",
+        "right_shs_performance_id",
+        "right_shs_performance_url",
+        "shs_work_ids",
+        "source",
+    ]
+    review_rows = musicdb_connection_review_rows(musicdb_connections, matches)
 
     _write_csv(metadata_csv, enriched)
     _write_csv(matches_csv, matches, match_columns)
     _write_csv(musicdb_connections_csv, musicdb_connections, musicdb_connection_columns)
+    _write_csv(musicdb_review_csv, review_rows, review_columns)
 
     with sqlite3.connect(sqlite_path) as conn:
         _replace_table(conn, "msd_shs_track_metadata", enriched)
         _replace_table(conn, "msd_shs_musicdb_matches", matches, match_columns)
         _replace_table(conn, "msd_shs_musicdb_connections", musicdb_connections, musicdb_connection_columns)
+        _replace_table(conn, "msd_shs_musicdb_connection_review", review_rows, review_columns)
         conn.executescript(
             """
             CREATE INDEX IF NOT EXISTS idx_msd_shs_track_metadata_title_artist
@@ -563,6 +685,10 @@ def add_metadata_outputs(
                 ON msd_shs_musicdb_matches(recording_id);
             CREATE INDEX IF NOT EXISTS idx_msd_shs_musicdb_matches_track
                 ON msd_shs_musicdb_matches(msd_track_id);
+            CREATE INDEX IF NOT EXISTS idx_msd_shs_musicdb_connection_review_left
+                ON msd_shs_musicdb_connection_review(left_recording_id);
+            CREATE INDEX IF NOT EXISTS idx_msd_shs_musicdb_connection_review_right
+                ON msd_shs_musicdb_connection_review(right_recording_id);
             """
         )
         conn.commit()
@@ -571,9 +697,11 @@ def add_metadata_outputs(
     summary["metadata_enriched_count"] = len(enriched)
     summary["musicdb_match_count"] = len(matches)
     summary["musicdb_connection_count"] = len(musicdb_connections)
+    summary["musicdb_connection_review_count"] = len(review_rows)
     summary["outputs"]["track_metadata_csv"] = str(metadata_csv)
     summary["outputs"]["musicdb_matches_csv"] = str(matches_csv)
     summary["outputs"]["musicdb_connections_csv"] = str(musicdb_connections_csv)
+    summary["outputs"]["musicdb_connection_review_csv"] = str(musicdb_review_csv)
     summary_path = output_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return summary
@@ -618,6 +746,7 @@ def run(
         print(f"Enriched {summary['metadata_enriched_count']} MSD SHS performances with track metadata")
         print(f"Matched {summary['musicdb_match_count']} rows to MusicDB recordings")
         print(f"Wrote {summary['musicdb_connection_count']} MusicDB same-clique connection candidates")
+        print(f"Wrote {summary['musicdb_connection_review_count']} MusicDB connection review rows")
     else:
         print(f"Skipped metadata enrichment; missing {track_metadata_db}")
     print(f"SQLite: {summary['outputs']['sqlite']}")

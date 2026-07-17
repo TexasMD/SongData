@@ -199,6 +199,7 @@ Default local outputs:
 - `data\staging\codex\msd_secondhand\msd_shs_track_metadata.csv`
 - `data\staging\codex\msd_secondhand\msd_shs_musicdb_matches.csv`
 - `data\staging\codex\msd_secondhand\msd_shs_musicdb_connections.csv`
+- `data\staging\codex\msd_secondhand\msd_shs_musicdb_connection_review.csv`
 - `data\staging\codex\msd_secondhand\msd_secondhand.sqlite`
 
 The subset stores MSD track IDs, MSD artist IDs, SHS work IDs, and SHS
@@ -217,6 +218,12 @@ run, the importer enriched all 18,196 SHS subset performances, found 482 exact
 normalized title/artist matches to local MusicDB recordings, and staged 63
 same-clique MusicDB connection candidates for review. These are candidates, not
 official relationship promotions.
+
+The review export places both candidate recordings side by side and includes
+`review_status`, `review_notes`, and `review_flags` columns. On the same run,
+28 of the 63 candidates had no automatic warning flags; the remaining rows were
+flagged for missing SHS performance URLs, same-artist ambiguity, ambiguous local
+matches, or multiple MSD matches to one local recording.
 
 ### Last.fm Datasets / LFM-1b
 
