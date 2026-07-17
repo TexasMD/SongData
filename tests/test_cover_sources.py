@@ -9,6 +9,7 @@ import sys
 
 from bs4 import BeautifulSoup
 
+import src.cover_scraper as cover_scraper
 from src.cover_info_client import CoverInfoClient
 from src.secondhandsongs_client import SecondHandSongsClient
 from src.whosampled_client import WhoSampledClient
@@ -134,6 +135,31 @@ def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
     seen = []
 
     def fake_get(url, params=None, timeout=None):
+        if "/performance/cover-1" in url:
+            return FakeResponse(
+                200,
+                {
+                    "entityType": "performance",
+                    "uri": "https://api.secondhandsongs.com/performance/cover-1",
+                    "title": "Blackbird",
+                    "performer": {"name": "Cover Artist"},
+                    "isOriginal": False,
+                    "originals": [
+                        {
+                            "entityType": "work",
+                            "title": "Blackbird",
+                            "original": {
+                                "entityType": "performance",
+                                "title": "Blackbird",
+                                "performer": {"name": "Original Artist"},
+                                "isOriginal": True,
+                            },
+                        }
+                    ],
+                    "covers": [],
+                },
+                url,
+            )
         seen.append((url, params))
         title = params.get("title", "")
         performer = params.get("performer", "")
@@ -190,6 +216,68 @@ def test_secondhandsongs_client_groups_exact_title_versions(monkeypatch):
     assert len(seen) >= 2
 
 
+def test_secondhandsongs_client_extracts_original_detail(monkeypatch):
+    client = SecondHandSongsClient()
+
+    def fake_get(url, params=None, timeout=None):
+        if url.endswith("/search/performance"):
+            return FakeResponse(
+                200,
+                {
+                    "totalResults": 1,
+                    "resultPage": [
+                        {
+                            "entityType": "performance",
+                            "uri": "https://api.secondhandsongs.com/performance/original-1",
+                            "title": "Blackbird",
+                            "performer": {"name": "The Beatles"},
+                            "isOriginal": True,
+                        }
+                    ],
+                    "skippedResults": 0,
+                },
+                f"{url}?page={params.get('page', 0)}",
+            )
+        if "/performance/original-1" in url:
+            return FakeResponse(
+                200,
+                {
+                    "entityType": "performance",
+                    "uri": "https://api.secondhandsongs.com/performance/original-1",
+                    "title": "Blackbird",
+                    "performer": {"name": "The Beatles"},
+                    "isOriginal": True,
+                    "covers": [
+                        {
+                            "entityType": "performance",
+                            "title": "Blackbird",
+                            "performer": {"name": "Eva Cassidy"},
+                        }
+                    ],
+                    "originals": [],
+                },
+                url,
+            )
+        raise AssertionError(url)
+
+    monkeypatch.setattr(client.session, "get", fake_get)
+
+    rows = client.extract_covers("Blackbird", "The Beatles", original_year="1968")
+
+    assert rows == [
+        {
+            "title": "Blackbird",
+            "artist": "Eva Cassidy",
+            "musicbrainz_recording_id": None,
+            "cover_song": "Yes",
+            "original_title": "Blackbird",
+            "original_artist": "The Beatles",
+            "original_year": "1968",
+            "source": "SecondHandSongs",
+        }
+    ]
+
+
 def test_secondhandsongs_client_uses_api_key(monkeypatch):
     monkeypatch.setenv("SECONDHANDSONGS_API_KEY", "test-shs-key")
 
@@ -233,6 +321,209 @@ def test_secondhandsongs_client_paginates_until_total_results(monkeypatch):
 
     assert len(rows) == 5
     assert pages_seen == [0, 1, 2]
+
+
+def test_secondhandsongs_smoke_diagnostics_summarize_actual_checks():
+    smoke_path = Path(__file__).resolve().parents[1] / "scripts" / "smoke_cover_sources.py"
+    spec = spec_from_file_location("smoke_cover_sources", smoke_path)
+    assert spec and spec.loader
+    smoke = module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+
+    rows = [
+        {"title": "Tainted Love", "artist": "Flying Pickets"},
+        {"title": "Tainted Love", "artist": "John Cale"},
+    ]
+    checks = [
+        {
+            "query_kind": "search_performance",
+            "query_url": "https://api.secondhandsongs.com/search/performance?title=Tainted+Love&performer=Gloria+Jones",
+            "result_count": 1,
+        },
+        {
+            "query_kind": "search_performance",
+            "query_url": "https://api.secondhandsongs.com/search/performance?title=Tainted+Love&page=0",
+            "result_count": 100,
+        },
+        {
+            "query_kind": "performance_detail",
+            "query_url": "https://api.secondhandsongs.com/performance/646",
+            "result_count": 225,
+        },
+    ]
+
+    diagnostics = smoke.secondhandsongs_diagnostics(rows, checks)
+
+    assert diagnostics["returned_row_count"] == 2
+    assert diagnostics["exact_performance_count"] == 1
+    assert diagnostics["broad_performance_count"] == 100
+    assert diagnostics["detail_result_count"] == 225
+    assert diagnostics["detail_url"] == "https://api.secondhandsongs.com/performance/646"
+    assert diagnostics["known_covers_present"] == {"Jeff Buckley": False, "John Cale": True}
+
+
+def test_smoke_retries_source_empty_when_peer_has_many_results():
+    smoke_path = Path(__file__).resolve().parents[1] / "scripts" / "smoke_cover_sources.py"
+    spec = spec_from_file_location("smoke_cover_sources_retry", smoke_path)
+    assert spec and spec.loader
+    smoke = module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+
+    calls = {"empty.source": 0}
+
+    def many_source(title, artist, year, callback):
+        return [{"title": f"Cover {index}", "artist": f"Artist {index}"} for index in range(10)]
+
+    def empty_source(title, artist, year, callback):
+        calls["empty.source"] += 1
+        return []
+
+    smoke.SOURCES = {
+        "many.source": many_source,
+        "empty.source": empty_source,
+    }
+
+    result = smoke.run_smoke("Song", "Artist", "2000", ["many.source", "empty.source"])
+
+    empty_result = result["sources"]["empty.source"]
+    assert calls["empty.source"] == 2
+    assert empty_result["retry_attempts"] == 1
+    assert empty_result["retry_reason"].startswith("cross_source_empty")
+    assert empty_result["warning"] == "suspicious_empty_after_retry"
+
+
+def test_scrape_covers_retries_empty_sources_when_peer_has_many_results(monkeypatch):
+    monkeypatch.setattr(cover_scraper, "fetch_work_id_for_recording", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        cover_scraper,
+        "scrape_cover_info",
+        lambda *args, **kwargs: [
+            {
+                "title": f"Song {index}",
+                "artist": f"Artist {index}",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "cover.info",
+            }
+            for index in range(10)
+        ],
+    )
+    secondhandsongs_calls = {"count": 0}
+
+    def fake_secondhandsongs(title, artist, original_year="", on_source_checked=None):
+        secondhandsongs_calls["count"] += 1
+        if secondhandsongs_calls["count"] == 1:
+            return []
+        return [
+            {
+                "title": "Song 10",
+                "artist": "Artist 10",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "SecondHandSongs",
+            }
+        ]
+
+    monkeypatch.setattr(cover_scraper, "scrape_secondhandsongs", fake_secondhandsongs)
+    monkeypatch.setattr(cover_scraper, "scrape_whosampled", lambda *args, **kwargs: [])
+    checks = []
+
+    rows = cover_scraper.scrape_covers("Song", "Artist", "2000", on_source_checked=lambda *args: checks.append(args))
+
+    assert secondhandsongs_calls["count"] == 2
+    assert any(row["source"] == "SecondHandSongs" for row in rows)
+    assert ("SecondHandSongs", "cross_source_empty_retry", "internal://cross-source-empty-retry", 1) == checks[-2][:4]
+
+
+def test_scrape_covers_always_attempts_all_three_relationship_sources(monkeypatch):
+    monkeypatch.setattr(cover_scraper, "fetch_work_id_for_recording", lambda *args, **kwargs: None)
+    calls = []
+
+    def fake_cover_info(*args, **kwargs):
+        calls.append("cover.info")
+        return [
+            {
+                "title": "Song",
+                "artist": "Cover Info Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "cover.info",
+            }
+        ]
+
+    def fake_secondhandsongs(*args, **kwargs):
+        calls.append("SecondHandSongs")
+        return [
+            {
+                "title": "Song",
+                "artist": "SHS Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "SecondHandSongs",
+            }
+        ]
+
+    def fake_whosampled(*args, **kwargs):
+        calls.append("WhoSampled")
+        return [
+            {
+                "title": "Song",
+                "artist": "WhoSampled Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "WhoSampled",
+            }
+        ]
+
+    monkeypatch.setattr(cover_scraper, "scrape_cover_info", fake_cover_info)
+    monkeypatch.setattr(cover_scraper, "scrape_secondhandsongs", fake_secondhandsongs)
+    monkeypatch.setattr(cover_scraper, "scrape_whosampled", fake_whosampled)
+
+    rows = cover_scraper.scrape_covers("Song", "Artist", "2000")
+
+    assert calls == ["cover.info", "SecondHandSongs", "WhoSampled"]
+    assert {row["source"] for row in rows} == {"cover.info", "SecondHandSongs", "WhoSampled"}
+
+
+def test_scrape_covers_continues_when_relationship_source_errors(monkeypatch):
+    monkeypatch.setattr(cover_scraper, "fetch_work_id_for_recording", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        cover_scraper,
+        "scrape_cover_info",
+        lambda *args, **kwargs: [
+            {
+                "title": "Song",
+                "artist": "Cover Info Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "cover.info",
+            }
+        ],
+    )
+
+    def broken_secondhandsongs(*args, **kwargs):
+        raise RuntimeError("temporary SHS failure")
+
+    monkeypatch.setattr(cover_scraper, "scrape_secondhandsongs", broken_secondhandsongs)
+    monkeypatch.setattr(
+        cover_scraper,
+        "scrape_whosampled",
+        lambda *args, **kwargs: [
+            {
+                "title": "Song",
+                "artist": "WhoSampled Artist",
+                "musicbrainz_recording_id": None,
+                "cover_song": "Yes",
+                "source": "WhoSampled",
+            }
+        ],
+    )
+    checks = []
+
+    rows = cover_scraper.scrape_covers("Song", "Artist", "2000", on_source_checked=lambda *args: checks.append(args))
+
+    assert {row["source"] for row in rows} == {"cover.info", "WhoSampled"}
+    assert any(check[:4] == ("SecondHandSongs", "source_error", "internal://source-error/SecondHandSongs", 0) for check in checks)
 
 
 def test_whosampled_parser_handles_track_connections():

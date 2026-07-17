@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import logging
 import os
 import re
+from urllib.parse import urlparse
 from typing import Any, Callable
 
 import requests
@@ -82,6 +83,45 @@ class SecondHandSongsClient:
         )
         return payload
 
+    def _get_json(
+        self,
+        path_or_url: str,
+        *,
+        callback: SourceCheckCallback | None = None,
+        query_kind: str,
+    ) -> dict[str, Any]:
+        url = path_or_url if path_or_url.startswith("http") else f"{self.base_url}{path_or_url}"
+        resp = self.session.get(url, timeout=30)
+        payload: dict[str, Any] = {}
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+                if isinstance(data, dict):
+                    payload = data
+            except ValueError:
+                payload = {}
+        result_count = 0
+        if payload:
+            result_count = sum(
+                len(payload.get(key) or [])
+                for key in ("covers", "originals", "derivedWorks", "sampledBy", "usesSamplesFrom")
+            )
+        _emit_checked(
+            callback,
+            source="SecondHandSongs",
+            query_kind=query_kind,
+            query_url=resp.url if resp is not None else url,
+            result_count=result_count,
+        )
+        return payload
+
+    @staticmethod
+    def _api_path(uri: str | None) -> str:
+        if not uri:
+            return ""
+        parsed = urlparse(uri)
+        return parsed.path if parsed.scheme else uri
+
     def search_performances(
         self,
         title: str,
@@ -113,6 +153,117 @@ class SecondHandSongsClient:
             if len(results) < page_size:
                 break
         return collected
+
+    def search_works(
+        self,
+        title: str,
+        *,
+        callback: SourceCheckCallback | None = None,
+        page_size: int = 100,
+        max_pages: int = 20,
+    ) -> list[dict[str, Any]]:
+        collected: list[dict[str, Any]] = []
+        for page in range(max_pages):
+            params = {"title": title, "page": page, "pageSize": page_size}
+            resp = self.session.get(f"{self.base_url}/search/work", params=params, timeout=30)
+            payload: dict[str, Any] = {}
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    if isinstance(data, dict):
+                        payload = data
+                except ValueError:
+                    payload = {}
+            results = payload.get("resultPage") or []
+            _emit_checked(
+                callback,
+                source="SecondHandSongs",
+                query_kind="search_work",
+                query_url=resp.url if resp is not None else f"{self.base_url}/search/work",
+                result_count=len(results),
+            )
+            if not results:
+                break
+            collected.extend([item for item in results if isinstance(item, dict)])
+            total_results = int(payload.get("totalResults") or 0)
+            skipped_results = int(payload.get("skippedResults") or page * page_size)
+            if total_results and skipped_results + len(results) >= total_results:
+                break
+            if len(results) < page_size:
+                break
+        return collected
+
+    def get_performance(
+        self,
+        uri_or_id: str,
+        *,
+        callback: SourceCheckCallback | None = None,
+    ) -> dict[str, Any]:
+        path = uri_or_id if uri_or_id.startswith("/performance/") else self._api_path(uri_or_id)
+        if not path.startswith("/performance/"):
+            path = f"/performance/{uri_or_id}"
+        return self._get_json(path, callback=callback, query_kind="performance_detail")
+
+    def get_work(
+        self,
+        uri_or_id: str,
+        *,
+        callback: SourceCheckCallback | None = None,
+    ) -> dict[str, Any]:
+        path = uri_or_id if uri_or_id.startswith("/work/") else self._api_path(uri_or_id)
+        if not path.startswith("/work/"):
+            path = f"/work/{uri_or_id}"
+        return self._get_json(path, callback=callback, query_kind="work_detail")
+
+    @staticmethod
+    def _performer_name(item: dict[str, Any]) -> str:
+        return str((item.get("performer") or {}).get("name") or "").strip()
+
+    def _rows_from_performance_detail(
+        self,
+        detail: dict[str, Any],
+        *,
+        fallback_title: str,
+        fallback_artist: str,
+        original_year: str,
+    ) -> list[dict[str, Any]]:
+        source_title = str(detail.get("title") or fallback_title).strip()
+        source_artist = self._performer_name(detail) or fallback_artist
+        rows: list[dict[str, Any]] = []
+
+        if detail.get("isOriginal"):
+            for cover in detail.get("covers") or []:
+                rows.append(
+                    {
+                        "title": str(cover.get("title") or "").strip(),
+                        "artist": self._performer_name(cover),
+                        "musicbrainz_recording_id": None,
+                        "cover_song": "Yes",
+                        "original_title": source_title,
+                        "original_artist": source_artist,
+                        "original_year": original_year,
+                        "source": "SecondHandSongs",
+                    }
+                )
+            return [row for row in rows if row["title"]]
+
+        for original in detail.get("originals") or []:
+            original_perf = original.get("original") or {}
+            original_title = str(original_perf.get("title") or original.get("title") or "").strip()
+            original_artist = self._performer_name(original_perf)
+            rows.append(
+                {
+                    "title": source_title,
+                    "artist": source_artist,
+                    "musicbrainz_recording_id": None,
+                    "cover_song": "Yes",
+                    "original_title": original_title,
+                    "original_artist": original_artist,
+                    "original_year": original_year,
+                    "source": "SecondHandSongs",
+                }
+            )
+        return [row for row in rows if row["title"] and row["original_title"]]
 
     def extract_covers(
         self,
@@ -161,6 +312,19 @@ class SecondHandSongsClient:
             target = exact_matches[0]
         if target is None:
             return []
+
+        detail = self.get_performance(
+            str(target.get("uri") or ""),
+            callback=callback,
+        )
+        detail_rows = self._rows_from_performance_detail(
+            detail,
+            fallback_title=title,
+            fallback_artist=artist,
+            original_year=original_year,
+        )
+        if detail_rows:
+            return detail_rows
 
         source_is_original = bool(target.get("isOriginal"))
         source_title = str(target.get("title") or title).strip()

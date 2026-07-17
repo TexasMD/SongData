@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 root_dir = Path(__file__).resolve().parents[1]
@@ -331,6 +332,11 @@ def api_commonalities(request: CommonalitiesRequest) -> dict[str, Any]:
         shared["bpm_range"] = [min(bpms), max(bpms)]
 
     return {"count": len(rows), "commonalities": shared, "records": sanitize_records(rows)}
+
+
+frontend_dist = root_dir / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/app", StaticFiles(directory=frontend_dist, html=True), name="app")
 
 
 if __name__ == "__main__":
