@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import logging
 import random
 import re
 import time
+from collections.abc import Callable
+from datetime import datetime, timezone
+from typing import Any
 from urllib.parse import quote_plus, urljoin
-from typing import Any, Callable
 
-import cloudscraper
 from bs4 import BeautifulSoup
+from curl_cffi import requests
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,9 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _emit_checked(callback, query_kind: str, query_url: str, result_count: int | None) -> None:
+def _emit_checked(
+    callback, query_kind: str, query_url: str, result_count: int | None
+) -> None:
     if callback is None:
         return
     callback("WhoSampled", query_kind, query_url, result_count, _utc_now_iso())
@@ -32,9 +35,7 @@ def _clean(text: str) -> str:
 
 class WhoSampledClient:
     def __init__(self) -> None:
-        self.session = cloudscraper.create_scraper(
-            browser={"browser": "chrome", "platform": "windows", "mobile": False}
-        )
+        self.session = requests.Session(impersonate="chrome110")
         self.base_delay = 4.0
 
     def _rotate_user_agent(self) -> None:
@@ -62,7 +63,9 @@ class WhoSampledClient:
                     _emit_checked(callback, query_kind, resp.url, 0)
                     return BeautifulSoup(resp.text, "html.parser")
                 if resp.status_code in (403, 429):
-                    print(f"    [WhoSampled] Blocked (Status {resp.status_code}). Backing off...")
+                    print(
+                        f"    [WhoSampled] Blocked (Status {resp.status_code}). Backing off..."
+                    )
                     self.base_delay *= 2
                     self._rotate_user_agent()
                 else:
@@ -82,7 +85,9 @@ class WhoSampledClient:
     @classmethod
     def _extract_artist_from_title(cls, title_attr: str) -> tuple[str, str]:
         title_attr = title_attr.strip()
-        match = re.match(r"^(?P<artist>.+?)\s+by\s+(?P<song>.+)$", title_attr, re.IGNORECASE)
+        match = re.match(
+            r"^(?P<artist>.+?)\s+by\s+(?P<song>.+)$", title_attr, re.IGNORECASE
+        )
         if not match:
             return "", ""
         return match.group("artist").strip(), match.group("song").strip()
@@ -93,11 +98,15 @@ class WhoSampledClient:
         track_year = ""
 
         track_h3 = item.select_one("h3.trackName")
-        track_title_node = item.select_one('h3.trackName a span[itemprop="name"]') or item.select_one("h3.trackName a")
+        track_title_node = item.select_one(
+            'h3.trackName a span[itemprop="name"]'
+        ) or item.select_one("h3.trackName a")
         if track_title_node:
             track_title = track_title_node.get_text(" ", strip=True).strip()
         elif track_h3:
-            track_title = re.sub(r"\s*\(\d{4}\)$", "", track_h3.get_text(" ", strip=True)).strip()
+            track_title = re.sub(
+                r"\s*\(\d{4}\)$", "", track_h3.get_text(" ", strip=True)
+            ).strip()
 
         track_cover = item.select_one("a.trackCover")
         if track_cover:
@@ -121,7 +130,9 @@ class WhoSampledClient:
 
         return track_title, track_artist, track_year
 
-    def _parse_connection_rows(self, soup: BeautifulSoup, original_title: str, original_artist: str) -> list[dict[str, Any]]:
+    def _parse_connection_rows(
+        self, soup: BeautifulSoup, original_title: str, original_artist: str
+    ) -> list[dict[str, Any]]:
         rows: list[dict] = []
 
         for header in soup.find_all(["h2", "h3"]):
@@ -130,7 +141,7 @@ class WhoSampledClient:
             if not section:
                 continue
 
-            if header_text.startswith("Covered in ") or header_text.startswith("Is a cover of "):
+            if header_text.startswith(("Covered in ", "Is a cover of ")):
                 for table in section.find_all("table"):
                     for tr in table.select("tbody tr"):
                         cells = tr.find_all("td")
@@ -142,9 +153,21 @@ class WhoSampledClient:
 
                         song_text = _clean(song_link.get_text(" ", strip=True))
                         artist_link = cells[2].find("a")
-                        artist_text = _clean(artist_link.get_text(" ", strip=True)) if artist_link else _clean(cells[2].get_text(" ", strip=True))
-                        year_text = _clean(cells[3].get_text(" ", strip=True)) if len(cells) > 3 else ""
-                        genre_text = _clean(cells[4].get_text(" ", strip=True)) if len(cells) > 4 else ""
+                        artist_text = (
+                            _clean(artist_link.get_text(" ", strip=True))
+                            if artist_link
+                            else _clean(cells[2].get_text(" ", strip=True))
+                        )
+                        year_text = (
+                            _clean(cells[3].get_text(" ", strip=True))
+                            if len(cells) > 3
+                            else ""
+                        )
+                        genre_text = (
+                            _clean(cells[4].get_text(" ", strip=True))
+                            if len(cells) > 4
+                            else ""
+                        )
 
                         if header_text.startswith("Covered in "):
                             rows.append(
@@ -176,7 +199,9 @@ class WhoSampledClient:
                             )
 
             elif header_text.startswith("Covers of"):
-                links = [a.get_text(" ", strip=True).strip() for a in header.find_all("a")]
+                links = [
+                    a.get_text(" ", strip=True).strip() for a in header.find_all("a")
+                ]
                 if len(links) >= 2:
                     original_artist = links[0]
                     original_title = links[1]
@@ -190,9 +215,21 @@ class WhoSampledClient:
                                 continue
                             song_text = _clean(song_link.get_text(" ", strip=True))
                             artist_link = cells[2].find("a")
-                            artist_text = _clean(artist_link.get_text(" ", strip=True)) if artist_link else _clean(cells[2].get_text(" ", strip=True))
-                            year_text = _clean(cells[3].get_text(" ", strip=True)) if len(cells) > 3 else ""
-                            genre_text = _clean(cells[4].get_text(" ", strip=True)) if len(cells) > 4 else ""
+                            artist_text = (
+                                _clean(artist_link.get_text(" ", strip=True))
+                                if artist_link
+                                else _clean(cells[2].get_text(" ", strip=True))
+                            )
+                            year_text = (
+                                _clean(cells[3].get_text(" ", strip=True))
+                                if len(cells) > 3
+                                else ""
+                            )
+                            genre_text = (
+                                _clean(cells[4].get_text(" ", strip=True))
+                                if len(cells) > 4
+                                else ""
+                            )
                             rows.append(
                                 {
                                     "title": song_text,
@@ -273,11 +310,18 @@ class WhoSampledClient:
 
         return rows
 
-    def search_song_url(self, title: str, artist: str, *, callback=None, recording_id: str = "") -> str | None:
+    def search_song_url(
+        self, title: str, artist: str, *, callback=None, recording_id: str = ""
+    ) -> str | None:
         query = quote_plus(f"{title} {artist}")
         search_url = f"https://www.whosampled.com/search/tracks/?q={query}"
         print(f"    [WhoSampled] Searching: {search_url}")
-        soup = self.fetch(search_url, callback=callback, recording_id=recording_id, query_kind="track_search")
+        soup = self.fetch(
+            search_url,
+            callback=callback,
+            recording_id=recording_id,
+            query_kind="track_search",
+        )
         if not soup:
             return None
 
@@ -300,11 +344,17 @@ class WhoSampledClient:
 
         return matches[0] if matches else None
 
-    def extract_covers_from_page(self, soup: BeautifulSoup, original_title: str, original_artist: str) -> list[dict[str, Any]]:
+    def extract_covers_from_page(
+        self, soup: BeautifulSoup, original_title: str, original_artist: str
+    ) -> list[dict[str, Any]]:
         return self._parse_connection_rows(soup, original_title, original_artist)
 
-    def scrape_whosampled_deep(self, title: str, artist: str, *, callback=None, recording_id: str = "") -> list[dict[str, Any]]:
-        song_url = self.search_song_url(title, artist, callback=callback, recording_id=recording_id)
+    def scrape_whosampled_deep(
+        self, title: str, artist: str, *, callback=None, recording_id: str = ""
+    ) -> list[dict[str, Any]]:
+        song_url = self.search_song_url(
+            title, artist, callback=callback, recording_id=recording_id
+        )
         if not song_url:
             return []
 
@@ -320,14 +370,25 @@ class WhoSampledClient:
             while current_url and current_url not in seen_urls:
                 seen_urls.add(current_url)
                 print(f"    [WhoSampled] Fetching page {page_num}: {current_url}")
-                query_kind = "track_page" if not current_url.endswith("/covered/") else "cover_page"
-                soup = self.fetch(current_url, callback=callback, recording_id=recording_id, query_kind=query_kind)
+                query_kind = (
+                    "track_page"
+                    if not current_url.endswith("/covered/")
+                    else "cover_page"
+                )
+                soup = self.fetch(
+                    current_url,
+                    callback=callback,
+                    recording_id=recording_id,
+                    query_kind=query_kind,
+                )
                 if not soup:
                     break
 
                 page_covers = self.extract_covers_from_page(soup, title, artist)
                 covers.extend(page_covers)
-                print(f"    [WhoSampled] Found {len(page_covers)} covers on page {page_num}")
+                print(
+                    f"    [WhoSampled] Found {len(page_covers)} covers on page {page_num}"
+                )
 
                 next_link = None
                 pagination = soup.select_one("span.next a")
@@ -345,5 +406,9 @@ class WhoSampledClient:
 client = WhoSampledClient()
 
 
-def scrape_whosampled(title: str, artist: str, *, callback=None, recording_id: str = "") -> list:
-    return client.scrape_whosampled_deep(title, artist, callback=callback, recording_id=recording_id)
+def scrape_whosampled(
+    title: str, artist: str, *, callback=None, recording_id: str = ""
+) -> list:
+    return client.scrape_whosampled_deep(
+        title, artist, callback=callback, recording_id=recording_id
+    )
