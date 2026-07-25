@@ -26,26 +26,33 @@ def get_spotify_token(session: requests.Session) -> str | None:
         )
         if response.status_code == 200:
             return response.json().get("access_token")
-    except requests.RequestException:
-        pass
+        else:
+            return f"Error: HTTP {response.status_code} {response.text}"
+    except requests.RequestException as e:
+        return f"Error: {e}"
     return None
 
 
 def fetch_spotify(title: str, artist: str) -> dict[str, Any] | None:
     session = requests.Session()
-    token = get_spotify_token(session)
-    if not token:
+    token_or_error = get_spotify_token(session)
+
+    if not token_or_error:
         return {"error": "No Spotify credentials"}
+    elif token_or_error.startswith("Error:"):
+        return {"error": f"Failed to authenticate with Spotify: {token_or_error}"}
 
     q = f"track:{title} artist:{artist}"
     try:
         response = session.get(
             f"https://api.spotify.com/v1/search?q={urllib.parse.quote(q)}&type=track&limit=5",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {token_or_error}"},
             timeout=10,
         )
         if response.status_code == 200:
             return response.json()
+        else:
+            return {"error": f"Spotify API returned HTTP {response.status_code} {response.text}"}
     except requests.RequestException as e:
         return {"error": str(e)}
     return None
