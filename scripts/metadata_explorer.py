@@ -1,14 +1,15 @@
 import argparse
+import csv
 import json
 import os
-import re
 import urllib.parse
 from typing import Any
+from pathlib import Path
 
 import requests
-import cloudscraper
 import yt_dlp
-from bs4 import BeautifulSoup
+
+from src.config import paths
 
 
 def get_spotify_token(session: requests.Session) -> str | None:
@@ -126,31 +127,59 @@ def fetch_youtube(title: str, artist: str) -> dict[str, Any] | None:
     return None
 
 
-def fetch_amazon_music(title: str, artist: str) -> dict[str, Any] | None:
-    scraper = cloudscraper.create_scraper()
-    query = urllib.parse.quote_plus(f"{artist} {title} music")
-    url = f"https://www.amazon.com/s?k={query}&i=digital-music"
+def write_csv(data: dict | None, filename: Path):
+    if not data or "error" in data:
+        print(f"Skipping {filename.name} due to error or missing data: {data}")
+        return
 
-    try:
-        response = scraper.get(url, timeout=15)
-        if response.status_code != 200:
-            return {"error": f"HTTP {response.status_code}"}
+    filename.parent.mkdir(parents=True, exist_ok=True)
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-        for item in soup.select('div[data-component-type="s-search-result"]'):
-            title_el = item.select_one('h2 a span')
-            author_el = item.select_one('.a-row.a-size-base.a-color-secondary .a-size-base')
-            if title_el:
-                results.append({
-                    "title": title_el.text.strip(),
-                    "artist": author_el.text.strip() if author_el else "Unknown"
-                })
-                if len(results) >= 5:
-                    break
-        return {"results": results}
-    except Exception as e:
-        return {"error": str(e)}
+    # Very basic flattening for the CSVs
+    rows = []
+
+    if "tracks" in data and "items" in data["tracks"]: # Spotify
+        for item in data["tracks"]["items"]:
+            rows.append({
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "artist": item["artists"][0]["name"] if item.get("artists") else "",
+                "album": item["album"]["name"] if item.get("album") else "",
+                "raw_json": json.dumps(item)
+            })
+    elif "results" in data: # iTunes, Discogs
+        for item in data["results"]:
+            rows.append({
+                "id": item.get("trackId") or item.get("id"),
+                "name": item.get("trackName") or item.get("title"),
+                "artist": item.get("artistName") or "",
+                "raw_json": json.dumps(item)
+            })
+    elif "recordings" in data: # MusicBrainz
+        for item in data["recordings"]:
+            rows.append({
+                "id": item.get("id"),
+                "name": item.get("title"),
+                "artist": item["artist-credit"][0]["name"] if item.get("artist-credit") else "",
+                "raw_json": json.dumps(item)
+            })
+    elif "entries" in data: # YouTube
+        for item in data["entries"]:
+            rows.append({
+                "id": item.get("id"),
+                "name": item.get("title"),
+                "artist": item.get("uploader"),
+                "raw_json": json.dumps(item)
+            })
+
+    if not rows:
+        print(f"No parseable items found to write for {filename.name}")
+        return
+
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Wrote {len(rows)} rows to {filename}")
 
 
 def main():
@@ -159,22 +188,27 @@ def main():
     parser.add_argument("--artist", required=True, help="Song artist")
     args = parser.parse_args()
 
-    results = {
-        "query": {
-            "title": args.title,
-            "artist": args.artist,
-        },
-        "sources": {}
-    }
+    project_paths = paths()
 
-    results["sources"]["spotify"] = fetch_spotify(args.title, args.artist)
-    results["sources"]["itunes"] = fetch_itunes(args.title, args.artist)
-    results["sources"]["musicbrainz"] = fetch_musicbrainz(args.title, args.artist)
-    results["sources"]["discogs"] = fetch_discogs(args.title, args.artist)
-    results["sources"]["youtube"] = fetch_youtube(args.title, args.artist)
-    results["sources"]["amazon"] = fetch_amazon_music(args.title, args.artist)
+    safe_title = "".join(c for c in args.title if c.isalnum() or c in " _-")
+    safe_artist = "".join(c for c in args.artist if c.isalnum() or c in " _-")
+    base_name = f"{safe_artist}_{safe_title}.csv".replace(" ", "_")
 
-    print(json.dumps(results, indent=2))
+    mb_data = fetch_musicbrainz(args.title, args.artist)
+    write_csv(mb_data, project_paths.basket_dir / "musicbrainz" / base_name)
+
+    yt_data = fetch_youtube(args.title, args.artist)
+    write_csv(yt_data, project_paths.basket_dir / "youtube_music" / base_name)
+
+    sp_data = fetch_spotify(args.title, args.artist)
+    write_csv(sp_data, project_paths.basket_dir / "spotify" / base_name)
+
+    dc_data = fetch_discogs(args.title, args.artist)
+    write_csv(dc_data, project_paths.basket_dir / "discogs" / base_name)
+
+    it_data = fetch_itunes(args.title, args.artist)
+    write_csv(it_data, project_paths.basket_dir / "itunes" / base_name)
+
 
 if __name__ == "__main__":
     main()
