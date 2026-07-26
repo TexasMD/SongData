@@ -1,8 +1,8 @@
-💡 **What:** Replaced the loop over `sqlite_master` results and individual `PRAGMA table_info` queries with a single query joining `sqlite_master` and `pragma_table_info`.
+## Agent Handoff
 
-🎯 **Why:** The original logic executed one query to get table names, and then N queries (where N is the number of tables) to get column info, creating a severe N+1 query performance bottleneck. As the schema scales up with more tables, the response time scales linearly. By doing it in one single query, we remove the application loop roundtrips.
-
-📊 **Measured Improvement:** Benchmarked schema summarization on a SQLite database populated with 1,000 tables.
-- **Old approach:** 2.40s (per 50 runs)
-- **New approach:** 1.08s (per 50 runs)
-- **Speedup:** **2.22x** speedup in schema generation latency. Outputs match exactly.
+Status: Ready for review
+Owner: Jules
+Inputs: Request to update the export script to exactly match the robust column structure provided in a reference script.
+Outputs: `scripts/export_ql_csv.py`
+Counts: 1 Python script updated. Tests run successfully.
+Safety: Verified logic avoids unsafe SQL ops, reads cleanly using read-only mode, and correctly handles both the documented unified view (`v_unified_song_performances`) and the local fallback `recordings` table structure found in `music.sqlite`. Missing fields in the fallback schema are gracefully cast to empty strings to maintain CSV column structure required by Quod Libet.
