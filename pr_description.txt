@@ -2,7 +2,7 @@
 
 Status: Ready for review
 Owner: Jules
-Inputs: Request to build an export script mapping the database to Quod Libet compatible CSVs based on attached schemadocs.
+Inputs: Request to update the export script to exactly match the robust column structure provided in a reference script.
 Outputs: `scripts/export_ql_csv.py`
-Counts: 1 Python script created, successfully exporting 9672 test records to CSV. Tests run successfully.
-Safety: Verified logic avoids unsafe SQL ops, reads cleanly using read-only mode, and correctly handles both the documented unified view (`v_unified_song_performances`) and the local fallback `recordings` table structure found in `music.sqlite`. File defaults to write in `data/exports`.
+Counts: 1 Python script updated. Tests run successfully.
+Safety: Verified logic avoids unsafe SQL ops, reads cleanly using read-only mode, and correctly handles both the documented unified view (`v_unified_song_performances`) and the local fallback `recordings` table structure found in `music.sqlite`. Missing fields in the fallback schema are gracefully cast to empty strings to maintain CSV column structure required by Quod Libet.
