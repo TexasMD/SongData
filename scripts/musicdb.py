@@ -1,32 +1,34 @@
 import argparse
-import sys
+import csv
 import json
 import os
-import csv
+import sys
 from pathlib import Path
 
 # Add parent directory to path so we can import src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.schema import validate_record
-from src.quality import generate_quality_report as src_generate_quality_report
-from src.config import paths as musicdb_paths
-from src.sqlite_poc import insert_v2_records, DB_PATH
-from src.utils import backup_file, read_csv
-from src.commands import build_reference_db as reference_db_command
-from src.commands import metadata_audit as metadata_audit_command
-from src.commands import build_nyov_db as nyov_db_command
-from src.commands import nyov_report as nyov_report_command
-from src.commands import verify_nyov_batch as verify_nyov_batch_command
-from src.commands import nyov_verification_summary as nyov_verification_summary_command
-from src.commands import nyov_promotion_review as nyov_promotion_review_command
-from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
-from src.commands import export_nyov_official_patch as export_nyov_official_patch_command
-from src.commands import apply_nyov_official_patch as apply_nyov_official_patch_command
-from src.commands import apply_data_patches as apply_data_patches_command
-from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
-
+from src.commands import apply_data_patches as apply_data_patches_command
+from src.commands import apply_nyov_official_patch as apply_nyov_official_patch_command
+from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
+from src.commands import build_nyov_db as nyov_db_command
+from src.commands import build_reference_db as reference_db_command
+from src.commands import (
+    export_nyov_official_patch as export_nyov_official_patch_command,
+)
+from src.commands import export_quodlibet as export_quodlibet_command
+from src.commands import metadata_audit as metadata_audit_command
+from src.commands import nyov_promotion_review as nyov_promotion_review_command
+from src.commands import nyov_report as nyov_report_command
+from src.commands import nyov_verification_summary as nyov_verification_summary_command
+from src.commands import verify_nyov_batch as verify_nyov_batch_command
+from src.config import paths as musicdb_paths
+from src.quality import generate_quality_report as src_generate_quality_report
+from src.schema import validate_record
+from src.sqlite_poc import DB_PATH, insert_v2_records
+from src.utils import backup_file, read_csv
+from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_TAKEOUT_INPUT = Path(
@@ -35,13 +37,39 @@ DEFAULT_TAKEOUT_INPUT = Path(
         PROJECT_DIR / "data" / "imports" / "youtube_music_takeout" / "playlists",
     )
 )
-DEFAULT_TAKEOUT_OUTPUT = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_playlist_videos_deduped.csv"
-DEFAULT_TAKEOUT_SONGS = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_songs.csv"
-DEFAULT_TAKEOUT_CACHE = PROJECT_DIR / "tmp" / "youtube_music_playlist_metadata_cache.json"
-DEFAULT_TAKEOUT_VERIFIED = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verified.csv"
-DEFAULT_TAKEOUT_UNMATCHED = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_unmatched.csv"
-DEFAULT_TAKEOUT_VERIFICATION_SUMMARY = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verification_summary.json"
-DEFAULT_TAKEOUT_VERIFICATION_CACHE = PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verification_cache.json"
+DEFAULT_TAKEOUT_OUTPUT = (
+    PROJECT_DIR
+    / "data"
+    / "exports"
+    / "codex"
+    / "youtube_music_playlist_videos_deduped.csv"
+)
+DEFAULT_TAKEOUT_SONGS = (
+    PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_songs.csv"
+)
+DEFAULT_TAKEOUT_CACHE = (
+    PROJECT_DIR / "tmp" / "youtube_music_playlist_metadata_cache.json"
+)
+DEFAULT_TAKEOUT_VERIFIED = (
+    PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_verified.csv"
+)
+DEFAULT_TAKEOUT_UNMATCHED = (
+    PROJECT_DIR / "data" / "exports" / "codex" / "youtube_music_takeout_unmatched.csv"
+)
+DEFAULT_TAKEOUT_VERIFICATION_SUMMARY = (
+    PROJECT_DIR
+    / "data"
+    / "exports"
+    / "codex"
+    / "youtube_music_takeout_verification_summary.json"
+)
+DEFAULT_TAKEOUT_VERIFICATION_CACHE = (
+    PROJECT_DIR
+    / "data"
+    / "exports"
+    / "codex"
+    / "youtube_music_takeout_verification_cache.json"
+)
 
 INPUT_MOCK_FILE = "data/staging/recordings_mock.csv"
 
@@ -85,6 +113,7 @@ def ensure_mock_file():
                 }
             )
 
+
 def build_v2(input_csv=INPUT_MOCK_FILE, write_enabled=False, sqlite_path=DB_PATH):
     print(f"build-v2: dry-run={not write_enabled}")
     if write_enabled:
@@ -99,6 +128,7 @@ def build_v2(input_csv=INPUT_MOCK_FILE, write_enabled=False, sqlite_path=DB_PATH
 
         # tests/test_cli_upgraded.py expects sqlite_path to be a real SQLite DB
         import sqlite3
+
         with sqlite3.connect(sqlite_path) as conn:
             cursor = conn.cursor()
             cursor.execute("CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY)")
@@ -163,6 +193,7 @@ def rebuild(write_enabled=False):
 def review_active_vs_staged():
     print("review-active-vs-staged...")
 
+
 def generate_quality_report(
     input_csv=INPUT_MOCK_FILE, write_enabled=False, export_dir=None
 ):
@@ -191,8 +222,7 @@ def generate_quality_report(
 
         with open(md_file, "w") as f:
             f.write("# Quality Report\n\n")
-            for k, v in report.items():
-                f.write(f"- **{k}**: {v}\n")
+            f.writelines(f"- **{k}**: {v}\n" for k, v in report.items())
         print(f"Exported Markdown report to {md_file}")
     else:
         print("Quality Report Summary:")
@@ -200,7 +230,6 @@ def generate_quality_report(
         print("DRY RUN: Would export JSON and Markdown reports to data/exports")
         print("Report contents:")
         print(json.dumps(report, indent=2))
-
 
 
 def import_playlist(
@@ -217,9 +246,15 @@ def import_playlist(
     print(f"Songs output: {songs_output}")
     print(f"Cache: {cache}")
     if not write_enabled:
-        print("DRY RUN: Would extract, dedupe, enrich, and write YouTube Music Takeout playlist metadata.")
-        print("DRY RUN: Would also write a compact song list with youtube music song ID, title, artist, album, year, and genre.")
-        print("DRY RUN: The resulting export can be consumed by build_songdb_v2.py for playlist membership matching.")
+        print(
+            "DRY RUN: Would extract, dedupe, enrich, and write YouTube Music Takeout playlist metadata."
+        )
+        print(
+            "DRY RUN: Would also write a compact song list with youtube music song ID, title, artist, album, year, and genre."
+        )
+        print(
+            "DRY RUN: The resulting export can be consumed by build_songdb_v2.py for playlist membership matching."
+        )
         return
 
     result = build_takeout_export(input_dir, output, cache, workers=workers)
@@ -242,8 +277,12 @@ def verify_youtube_music_takeout(
     print(f"Output: {output_csv}")
     print(f"Unmatched: {unmatched_csv}")
     if not write_enabled:
-        print("DRY RUN: Would check the 3531 title/artist rows against Spotify and iTunes.")
-        print("DRY RUN: Would write a canonical metadata CSV plus a separate unmatched review CSV.")
+        print(
+            "DRY RUN: Would check the 3531 title/artist rows against Spotify and iTunes."
+        )
+        print(
+            "DRY RUN: Would write a canonical metadata CSV plus a separate unmatched review CSV."
+        )
         return
 
     summary = build_verified_takeout_export(
@@ -379,7 +418,9 @@ def nyov_promotion_review(write_enabled=False, db_path=None, output_dir=None):
     )
 
 
-def apply_nyov_promotions(write_enabled=False, db_path=None, review_csv=None, promoted_by="manual_review"):
+def apply_nyov_promotions(
+    write_enabled=False, db_path=None, review_csv=None, promoted_by="manual_review"
+):
     apply_nyov_promotions_command.run(
         write=write_enabled,
         paths=musicdb_paths(),
@@ -389,7 +430,9 @@ def apply_nyov_promotions(write_enabled=False, db_path=None, review_csv=None, pr
     )
 
 
-def export_nyov_official_patch(write_enabled=False, db_path=None, official_csv=None, output_dir=None):
+def export_nyov_official_patch(
+    write_enabled=False, db_path=None, official_csv=None, output_dir=None
+):
     export_nyov_official_patch_command.run(
         write=write_enabled,
         paths=musicdb_paths(),
@@ -399,7 +442,9 @@ def export_nyov_official_patch(write_enabled=False, db_path=None, official_csv=N
     )
 
 
-def apply_nyov_official_patch(write_enabled=False, official_csv=None, patch_csv=None, backup_dir=None):
+def apply_nyov_official_patch(
+    write_enabled=False, official_csv=None, patch_csv=None, backup_dir=None
+):
     apply_nyov_official_patch_command.run(
         write=write_enabled,
         paths=musicdb_paths(),
@@ -409,7 +454,9 @@ def apply_nyov_official_patch(write_enabled=False, official_csv=None, patch_csv=
     )
 
 
-def apply_data_patches(write_enabled=False, patch_dir=None, patch_file=None, backup_dir=None):
+def apply_data_patches(
+    write_enabled=False, patch_dir=None, patch_file=None, backup_dir=None
+):
     apply_data_patches_command.run(
         write=write_enabled,
         paths=musicdb_paths(),
@@ -429,19 +476,15 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    parser_build = subparsers.add_parser("build-v2", help="Build the SQLite database")
+    subparsers.add_parser("build-v2", help="Build the SQLite database")
 
-    parser_rebuild = subparsers.add_parser(
+    subparsers.add_parser(
         "rebuild", help="Rebuild compatibility main CSV from recordings.csv"
     )
 
-    parser_review = subparsers.add_parser(
-        "review-active-vs-staged", help="Review staged changes"
-    )
+    subparsers.add_parser("review-active-vs-staged", help="Review staged changes")
 
-    parser_quality = subparsers.add_parser(
-        "quality-report", help="Generate a quality report"
-    )
+    subparsers.add_parser("quality-report", help="Generate a quality report")
 
     parser_import = subparsers.add_parser("import-playlist", help="Import a playlist")
     parser_import_ytm = subparsers.add_parser(
@@ -455,28 +498,38 @@ def main():
     for subparser in (parser_import, parser_import_ytm):
         subparser.add_argument("--input-dir", type=Path, default=DEFAULT_TAKEOUT_INPUT)
         subparser.add_argument("--output", type=Path, default=DEFAULT_TAKEOUT_OUTPUT)
-        subparser.add_argument("--songs-output", type=Path, default=DEFAULT_TAKEOUT_SONGS)
+        subparser.add_argument(
+            "--songs-output", type=Path, default=DEFAULT_TAKEOUT_SONGS
+        )
         subparser.add_argument("--cache", type=Path, default=DEFAULT_TAKEOUT_CACHE)
         subparser.add_argument("--workers", type=int, default=8)
     parser_verify_ytm.add_argument("--input", type=Path, default=DEFAULT_TAKEOUT_OUTPUT)
-    parser_verify_ytm.add_argument("--output", type=Path, default=DEFAULT_TAKEOUT_VERIFIED)
-    parser_verify_ytm.add_argument("--unmatched", type=Path, default=DEFAULT_TAKEOUT_UNMATCHED)
-    parser_verify_ytm.add_argument("--summary", type=Path, default=DEFAULT_TAKEOUT_VERIFICATION_SUMMARY)
-    parser_verify_ytm.add_argument("--cache", type=Path, default=DEFAULT_TAKEOUT_VERIFICATION_CACHE)
+    parser_verify_ytm.add_argument(
+        "--output", type=Path, default=DEFAULT_TAKEOUT_VERIFIED
+    )
+    parser_verify_ytm.add_argument(
+        "--unmatched", type=Path, default=DEFAULT_TAKEOUT_UNMATCHED
+    )
+    parser_verify_ytm.add_argument(
+        "--summary", type=Path, default=DEFAULT_TAKEOUT_VERIFICATION_SUMMARY
+    )
+    parser_verify_ytm.add_argument(
+        "--cache", type=Path, default=DEFAULT_TAKEOUT_VERIFICATION_CACHE
+    )
     parser_verify_ytm.add_argument("--workers", type=int, default=6)
 
-    parser_verify = subparsers.add_parser("verify", help="Verify data integrity")
+    subparsers.add_parser("verify", help="Verify data integrity")
 
-    parser_export = subparsers.add_parser("export-view", help="Export data view")
-    parser_reference_db = subparsers.add_parser(
+    subparsers.add_parser("export-view", help="Export data view")
+    subparsers.add_parser(
         "build-reference-db",
         help="Build the separate reference-ID SQLite database",
     )
-    parser_metadata_audit = subparsers.add_parser(
+    subparsers.add_parser(
         "metadata-audit",
         help="Audit dual-source verification and normalization incidents",
     )
-    parser_metadata_audit_main = subparsers.add_parser(
+    subparsers.add_parser(
         "metadata-audit-main",
         help="Audit the active compatibility CSV for dual-source verification and normalization incidents",
     )
@@ -494,24 +547,32 @@ def main():
     parser_nyov_report.add_argument("--db-path", type=Path, default=None)
     parser_nyov_report.add_argument("--output-dir", type=Path, default=None)
     parser_nyov_report.add_argument("--queue-limit", type=int, default=250)
-    parser_nyov_report.add_argument("--batch-step", default="candidate_dual_source_match")
+    parser_nyov_report.add_argument(
+        "--batch-step", default="candidate_dual_source_match"
+    )
     parser_nyov_report.add_argument("--batch-limit", type=int, default=100)
     parser_verify_nyov = subparsers.add_parser(
         "verify-nyov-batch",
         help="Verify a NYOV candidate batch against external providers without promoting rows",
     )
     parser_verify_nyov.add_argument("--db-path", type=Path, default=None)
-    parser_verify_nyov.add_argument("--batch-step", default="candidate_dual_source_match")
+    parser_verify_nyov.add_argument(
+        "--batch-step", default="candidate_dual_source_match"
+    )
     parser_verify_nyov.add_argument("--batch-limit", type=int, default=10)
     parser_verify_nyov.add_argument("--providers", default="itunes,musicbrainz,spotify")
-    parser_verify_nyov.add_argument("--strategy", choices=["all", "tie-breaker"], default="all")
+    parser_verify_nyov.add_argument(
+        "--strategy", choices=["all", "tie-breaker"], default="all"
+    )
     parser_verify_nyov.add_argument("--tie-breaker-providers", default="spotify")
     parser_nyov_verification_summary = subparsers.add_parser(
         "nyov-verification-summary",
         help="Summarize NYOV provider verification attempts for review",
     )
     parser_nyov_verification_summary.add_argument("--db-path", type=Path, default=None)
-    parser_nyov_verification_summary.add_argument("--output-dir", type=Path, default=None)
+    parser_nyov_verification_summary.add_argument(
+        "--output-dir", type=Path, default=None
+    )
     parser_nyov_promotion_review = subparsers.add_parser(
         "nyov-promotion-review",
         help="Export field-level NYOV promotion candidates for human review",
@@ -532,6 +593,13 @@ def main():
     parser_export_nyov_patch.add_argument("--db-path", type=Path, default=None)
     parser_export_nyov_patch.add_argument("--official-csv", type=Path, default=None)
     parser_export_nyov_patch.add_argument("--output-dir", type=Path, default=None)
+
+    parser_export_quodlibet = subparsers.add_parser(
+        "export-quodlibet",
+        help="Export database metadata to a Quod Libet compatible CSV.",
+    )
+    parser_export_quodlibet.add_argument("--db-path", type=Path, default=None)
+    parser_export_quodlibet.add_argument("--out", type=Path, default=None)
     parser_apply_nyov_patch = subparsers.add_parser(
         "apply-nyov-official-patch",
         help="Apply approved NYOV official patch rows to an official CSV with backup",
@@ -638,6 +706,12 @@ def main():
             official_csv=args.official_csv,
             output_dir=args.output_dir,
         )
+    elif args.command == "export-quodlibet":
+        export_quodlibet_command.run(
+            write_enabled=args.write,
+            db_path=args.db_path,
+            out=args.out,
+        )
     elif args.command == "apply-nyov-official-patch":
         apply_nyov_official_patch(
             write_enabled=args.write,
@@ -652,7 +726,6 @@ def main():
             patch_file=args.patch_file,
             backup_dir=args.backup_dir,
         )
-
 
 
 if __name__ == "__main__":
