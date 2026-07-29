@@ -24,6 +24,7 @@ from src.commands import apply_nyov_promotions as apply_nyov_promotions_command
 from src.commands import export_nyov_official_patch as export_nyov_official_patch_command
 from src.commands import apply_nyov_official_patch as apply_nyov_official_patch_command
 from src.commands import apply_data_patches as apply_data_patches_command
+from src.commands import export_db_to_csv as export_db_to_csv_command
 from src.youtube_music_takeout import build_takeout_export, build_takeout_song_export
 from scripts.verify_youtube_music_takeout import build_verified_takeout_export
 
@@ -547,6 +548,13 @@ def main():
     parser_apply_data_patches.add_argument("--patch-file", type=Path, default=None)
     parser_apply_data_patches.add_argument("--backup-dir", type=Path, default=None)
 
+    parser_export_db_to_csv = subparsers.add_parser(
+        "export-db-to-csv",
+        help="Export every non-internal table from a SQLite DB to CSV files",
+    )
+    parser_export_db_to_csv.add_argument("--db-path", type=Path, required=True, help="Path to the SQLite database")
+    parser_export_db_to_csv.add_argument("--output-dir", type=Path, default=None, help="Directory to save the CSV files (defaults to the database directory)")
+
     args = parser.parse_args()
 
     if args.command == "build-v2":
@@ -644,6 +652,12 @@ def main():
             official_csv=args.official_csv,
             patch_csv=args.patch_csv,
             backup_dir=args.backup_dir,
+        )
+    elif args.command == "export-db-to-csv":
+        export_db_to_csv_command.run(
+            write=args.write,
+            db_path=args.db_path,
+            output_dir=args.output_dir
         )
     elif args.command == "apply-data-patches":
         apply_data_patches(
