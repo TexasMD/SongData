@@ -17,15 +17,14 @@ import os
 import re
 import shutil
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_MAIN = PROJECT_DIR / "data" / "processed" / "Main_Song_Database.csv"
@@ -47,6 +46,20 @@ NOISE_TITLE_TOKENS = (
     "preview",
     "playlist",
     "topic",
+    "greatest hits",
+    "best of",
+    "volume",
+    "vol.",
+    "compilation",
+    "soundtrack",
+    "complete season",
+    "hits of",
+    "tribute to",
+    "karaoke version",
+    "60s",
+    "70s",
+    "80s",
+    "the highlights",
 )
 
 
@@ -82,9 +95,21 @@ def normalize_for_match(value: object) -> str:
 
 def normalize_title_for_match(value: object) -> str:
     value = clean(value).lower()
-    value = re.sub(r"\s*[-–—]\s*(?:radio edit|edit|live|remaster(?:ed)?|remix|acoustic|instrumental|mono|stereo)\b.*$", "", value)
-    value = re.sub(r"\s*\(([^)]*(?:radio edit|edit|live|remaster(?:ed)?|remix|acoustic|instrumental|mono|stereo)[^)]*)\)", " ", value)
-    value = re.sub(r"\s*\[[^\]]*(?:radio edit|edit|live|remaster(?:ed)?|remix|acoustic|instrumental|mono|stereo)[^\]]*\]", " ", value)
+    value = re.sub(
+        r"\s*[-–—]\s*(?:radio edit|edit|live|remaster(?:ed)?|remix|acoustic|instrumental|mono|stereo)\b.*$",
+        "",
+        value,
+    )
+    value = re.sub(
+        r"\s*\(([^)]*(?:radio edit|edit|live|remaster(?:ed)?|remix|acoustic|instrumental|mono|stereo)[^)]*)\)",
+        " ",
+        value,
+    )
+    value = re.sub(
+        r"\s*\[[^\]]*(?:radio edit|edit|live|remaster(?:ed)?|remix|acoustic|instrumental|mono|stereo)[^\]]*\]",
+        " ",
+        value,
+    )
     value = re.sub(r"[^a-z0-9]+", " ", value.replace("&", " and ").replace("’", "'"))
     return re.sub(r"\s+", " ", value).strip()
 
@@ -131,7 +156,9 @@ def write_csv(path: Path, headers: list[str], rows: list[dict[str, str]]) -> Non
 
 def session() -> requests.Session:
     s = requests.Session()
-    retry = Retry(connect=3, read=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+    retry = Retry(
+        connect=3, read=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504]
+    )
     adapter = HTTPAdapter(max_retries=retry)
     s.mount("http://", adapter)
     s.mount("https://", adapter)
@@ -158,7 +185,9 @@ def spotify_token(s: requests.Session) -> str | None:
     return response.json().get("access_token")
 
 
-def query_spotify(s: requests.Session, token: str, title: str, artist: str) -> list[dict[str, str]]:
+def query_spotify(
+    s: requests.Session, token: str, title: str, artist: str
+) -> list[dict[str, str]]:
     q = f"track:{title}"
     if artist:
         q = f"{q} artist:{artist}"
@@ -231,19 +260,216 @@ def query_itunes(s: requests.Session, title: str, artist: str) -> list[dict[str,
 
 def clean_title(text: str) -> str:
     text = clean(text)
-    text = re.sub(r"\s*\[[^\]]*(?:official|video|lyric|channel|topic|hd|4k|audio|preview)[^\]]*\]", "", text, flags=re.I)
-    text = re.sub(r"\s*\(([^)]*(?:official|video|lyric|channel|topic|hd|4k|audio|preview)[^)]*)\)", "", text, flags=re.I)
-    text = re.sub(r"\s*[-–—]\s*(?:official|video|lyric|audio)\b.*$", "", text, flags=re.I)
-    text = re.sub(r"\s*\|\s*(?:official|video|lyric|audio|channel|topic).*$", "", text, flags=re.I)
+    text = re.sub(
+        r"\s*\[[^\]]*(?:official|video|lyric|channel|topic|hd|4k|audio|preview)[^\]]*\]",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\s*\(([^)]*(?:official|video|lyric|channel|topic|hd|4k|audio|preview)[^)]*)\)",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\s*[-–—]\s*(?:official|video|lyric|audio)\b.*$", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"\s*\|\s*(?:official|video|lyric|audio|channel|topic).*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
     text = re.sub(r"\s+\#\S+.*$", "", text)
+
+    # Strip DB Tags
+    text = re.sub(r"\s*\[[a-z]{2,4}\d*d\]?$", "", text, flags=re.IGNORECASE)
+
+    # Strip Venues
+    text = re.sub(
+        r"\b(live\s+at\s+[\w\s]+|live\s+in\s+[\w\s]+|live\s+from\s+[\w\s]+|live\s+@\s+[\w\s]+)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(bbc\s+radio\s+1(?:\'?s)?\s*(?:piano\s+sessions?)?|radio\s+1(?:\'?s)?\s*piano\s+sessions?)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(triple\s+j(?:\s+like\s+a\s+version)?|for\s+like\s+a\s+version|like\s+a\s+version)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(mtv\s+unplugged)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(itunes\s+session|itunes\s+live(?:\s+from\s+[\w\s]+)?|itunes\s+sessions)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(vh1\s+storytellers)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(carnegie\s+hall|royal\s+albert\s+hall|red\s+rocks|tiny\s+desk|mission\s+ballroom)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(american\s+idol(?:\s+season\s+\d+)?|the\s+voice(?:\s+season\s+\d+)?)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\bin the live lounge\b", "", text, flags=re.IGNORECASE)
+
+    # Strip Instruments
+    text = re.sub(
+        r"\b(acoustic\s+guitar|electric\s+guitar|classical\s+guitar|solo\s+guitar|guitar)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(piano|grand\s+piano)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(electric\s+violin|violin|fiddle)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(r"\b(cello|violoncello)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(hammond\s+organ|organ|church\s+organ)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"\b(clarinet|saxes|saxophone|tenor\s+sax|alt\s+sax)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(flute|piccolo)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(trumpet|cornet|flugelhorn)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(trombone|tuba)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(harmonica|harp)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(accordion|bandoneon)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(moog\s+synthesizer|synthesizer|synth)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"\b(drums|percussion|vibraphone|marimba)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"\b(banjo|ukulele|mandolin|lute|sitar)\b", "", text, flags=re.IGNORECASE
+    )
+
+    # Strip hanging punctuation left by venue/instrument removal
+    text = re.sub(r"[\(\[\{\)\]\}]", "", text)
+    text = re.sub(r"^[-:\–\—\s]+|[-:\–\—\s]+$", "", text)
+
     return clean(text)
 
 
 def clean_artist(text: str) -> str:
     text = clean(text)
     text = re.sub(r"\s*\|\s*.*$", "", text)
-    text = re.sub(r"\s*\(.*?(?:official|video|channel|topic|music|remix).*$", "", text, flags=re.I)
-    text = re.sub(r"\s+(?:actual life|junos 365 sessions|disney channel animation|volume \d+|official|topic).*$", "", text, flags=re.I)
+    text = re.sub(
+        r"\s*\(.*?(?:official|video|channel|topic|music|remix).*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\s+(?:actual life|junos 365 sessions|disney channel animation|volume \d+|official|topic).*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Strip DB Tags
+    text = re.sub(r"\s*\[[a-z]{2,4}\d*d\]?$", "", text, flags=re.IGNORECASE)
+
+    # Strip Venues
+    text = re.sub(
+        r"\b(live\s+at\s+[\w\s]+|live\s+in\s+[\w\s]+|live\s+from\s+[\w\s]+|live\s+@\s+[\w\s]+)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(bbc\s+radio\s+1(?:\'?s)?\s*(?:piano\s+sessions?)?|radio\s+1(?:\'?s)?\s*piano\s+sessions?)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(triple\s+j(?:\s+like\s+a\s+version)?|for\s+like\s+a\s+version|like\s+a\s+version)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(mtv\s+unplugged)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(itunes\s+session|itunes\s+live(?:\s+from\s+[\w\s]+)?|itunes\s+sessions)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(vh1\s+storytellers)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(carnegie\s+hall|royal\s+albert\s+hall|red\s+rocks|tiny\s+desk|mission\s+ballroom)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(american\s+idol(?:\s+season\s+\d+)?|the\s+voice(?:\s+season\s+\d+)?)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\bin the live lounge\b", "", text, flags=re.IGNORECASE)
+
+    # Strip Instruments
+    text = re.sub(
+        r"\b(acoustic\s+guitar|electric\s+guitar|classical\s+guitar|solo\s+guitar|guitar)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(piano|grand\s+piano)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(electric\s+violin|violin|fiddle)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(r"\b(cello|violoncello)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(hammond\s+organ|organ|church\s+organ)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"\b(clarinet|saxes|saxophone|tenor\s+sax|alt\s+sax)\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"\b(flute|piccolo)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(trumpet|cornet|flugelhorn)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(trombone|tuba)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(harmonica|harp)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(accordion|bandoneon)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\b(moog\s+synthesizer|synthesizer|synth)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"\b(drums|percussion|vibraphone|marimba)\b", "", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"\b(banjo|ukulele|mandolin|lute|sitar)\b", "", text, flags=re.IGNORECASE
+    )
+
+    # Strip hanging punctuation left by venue/instrument removal
+    text = re.sub(r"[\(\[\{\)\]\}]", "", text)
+    text = re.sub(r"^[-:\–\—\s]+|[-:\–\—\s]+$", "", text)
+
     return clean(text)
 
 
@@ -257,7 +483,9 @@ def split_title_pairs(title: str) -> list[tuple[str, str, str]]:
         if left and right:
             pairs.append((left, right, f"split:{sep}:left=artist"))
             pairs.append((right, left, f"split:{sep}:left=title"))
-    feat_match = re.search(r"\s+(?:feat\.?|featuring|ft\.?)(?:\s+|\b)", title, flags=re.I)
+    feat_match = re.search(
+        r"\s+(?:feat\.?|featuring|ft\.?)(?:\s+|\b)", title, flags=re.IGNORECASE
+    )
     if feat_match:
         left = clean(title[: feat_match.start()])
         right = clean(title[feat_match.end() :])
@@ -306,7 +534,7 @@ def is_suspicious_row(row: dict[str, str]) -> bool:
         or clean_artist(artist) != artist
         or " - " in title
         or " | " in title
-        or bool(re.search(r"\b(feat\.?|featuring|ft\.?)\b", title, flags=re.I))
+        or bool(re.search(r"\b(feat\.?|featuring|ft\.?)\b", title, flags=re.IGNORECASE))
         or any(tok in title.lower() for tok in NOISE_TITLE_TOKENS)
         or any(
             tok in artist.lower()
@@ -317,12 +545,26 @@ def is_suspicious_row(row: dict[str, str]) -> bool:
                 "volume ",
                 "official",
                 "topic",
+                "greatest hits",
+                "best of",
+                "compilation",
+                "soundtrack",
+                "complete season",
+                "hits of",
+                "tribute to",
+                "karaoke version",
+                "60s",
+                "70s",
+                "80s",
+                "the highlights",
             ]
         )
     )
 
 
-def best_match(query: Candidate, results: Iterable[dict[str, str]]) -> tuple[dict[str, str] | None, float]:
+def best_match(
+    query: Candidate, results: Iterable[dict[str, str]]
+) -> tuple[dict[str, str] | None, float]:
     best: dict[str, str] | None = None
     best_score = 0.0
     for result in results:
@@ -334,7 +576,10 @@ def best_match(query: Candidate, results: Iterable[dict[str, str]]) -> tuple[dic
             if query_artist_norm and result_artist_norm:
                 if query_artist_norm == result_artist_norm:
                     artist_score = 1.0
-                elif query_artist_norm in result_artist_norm or result_artist_norm in query_artist_norm:
+                elif (
+                    query_artist_norm in result_artist_norm
+                    or result_artist_norm in query_artist_norm
+                ):
                     artist_score = max(artist_score, 0.95)
         else:
             artist_score = 0.5
@@ -343,7 +588,9 @@ def best_match(query: Candidate, results: Iterable[dict[str, str]]) -> tuple[dic
             score += 0.04
         if artist_score > 0.9:
             score += 0.03
-        if query.artist and normalize_for_match(query.artist) == normalize_for_match(result.get("artist", "")):
+        if query.artist and normalize_for_match(query.artist) == normalize_for_match(
+            result.get("artist", "")
+        ):
             score += 0.05
         if score > best_score:
             best = result
@@ -394,7 +641,7 @@ def choose_hit(
 
 
 def write_backup(main_csv: Path) -> Path:
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     backup_dir = DEFAULT_BACKUP_DIR / stamp
     backup_dir.mkdir(parents=True, exist_ok=True)
     backup_path = backup_dir / main_csv.name
@@ -406,13 +653,28 @@ def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
-    parser = argparse.ArgumentParser(description="Clean and verify questionable SongDB rows.")
+    parser = argparse.ArgumentParser(
+        description="Clean and verify questionable SongDB rows."
+    )
     parser.add_argument("--main", type=Path, default=DEFAULT_MAIN)
     parser.add_argument("--questionable", type=Path, default=DEFAULT_QUESTIONABLE)
     parser.add_argument("--export-dir", type=Path, default=DEFAULT_EXPORT_DIR)
-    parser.add_argument("--write", action="store_true", help="Write the cleaned rows back to the main database.")
-    parser.add_argument("--limit", type=int, default=0, help="Process at most this many questionable rows.")
-    parser.add_argument("--all", action="store_true", help="Process all rows instead of only obviously mangled ones.")
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="Write the cleaned rows back to the main database.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Process at most this many questionable rows.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Process all rows instead of only obviously mangled ones.",
+    )
     args = parser.parse_args()
 
     main_headers, main_rows = read_csv(args.main)
@@ -446,7 +708,10 @@ def main() -> int:
             break
         stats["rows_seen"] += 1
         raw_values = list(q_values)
-        q_row = {header: (raw_values[i] if i < len(raw_values) else "") for i, header in enumerate(main_headers)}
+        q_row = {
+            header: (raw_values[i] if i < len(raw_values) else "")
+            for i, header in enumerate(main_headers)
+        }
         matches = main_index.get(song_key(q_row.get("Title"), q_row.get("Artist")), [])
         if not matches:
             skipped.append(
@@ -454,7 +719,9 @@ def main() -> int:
                     "Questionable Row": str(q_index),
                     "Title": clean(raw_values[0] if len(raw_values) > 0 else ""),
                     "Artist": clean(raw_values[2] if len(raw_values) > 2 else ""),
-                    "Source Files": clean(raw_values[11] if len(raw_values) > 11 else ""),
+                    "Source Files": clean(
+                        raw_values[11] if len(raw_values) > 11 else ""
+                    ),
                     "Reason": "row_not_found_in_main_db",
                 }
             )
@@ -484,7 +751,9 @@ def main() -> int:
         for proposal in title_candidates(q_row):
             search_results: list[dict[str, str]] = []
             if token:
-                search_results.extend(query_spotify(s, token, proposal.title, proposal.artist))
+                search_results.extend(
+                    query_spotify(s, token, proposal.title, proposal.artist)
+                )
             search_results.extend(query_itunes(s, proposal.title, proposal.artist))
             match, score = best_match(proposal, search_results)
             if match and score > best_score:
