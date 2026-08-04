@@ -43,3 +43,4 @@ SongDB_v2/youtube_music_takeout_*.csv
 SongDB_v2/youtube_music_takeout_*.json
 data/source_metadata_matrix.csv
 docs/source_metadata_matrix_expanded.csv
+.cache
