@@ -1,9 +1,3 @@
-feat: script to safely split and deduplicate billboard artist arrays
+fix(split_billboard_artists): handle pandas NaN values gracefully
 
-This resolves the issue of deduplicating and separating Billboard artist strings.
-
-- Introduces `scripts/split_billboard_artists.py` which uses safe heuristics to separate known collaborations while protecting predefined full band names (e.g. Earth, Wind & Fire).
-- Implements targeted protection replacement, avoiding destructive shatter bugs when protected bands are in a collaboration.
-- Uses Python `argparse` to dynamically read from/write to passed CSVs.
-- Introduces full test coverage for the splitting logic.
-- Avoids mutating or hardcoding `/tmp/` paths in the codebase logic.
+Resolves a `TypeError: expected string or bytes-like object, got 'float'` crash when pandas parses empty artist name cells in the input CSV as `np.nan` floats.

@@ -5,6 +5,12 @@ from pathlib import Path
 from typing import List
 
 def split_artist_name(name: str) -> List[str]:
+    # Handle NaN/float from pandas if the field was empty
+    if not isinstance(name, str):
+        if pd.isna(name) or name is None:
+            return [""]
+        name = str(name)
+
     # Remove HTML tags if present (like the weird billboard link)
     name = re.sub(r'<[^>]+>', '', name).strip()
 

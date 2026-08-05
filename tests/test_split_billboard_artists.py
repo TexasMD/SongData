@@ -24,3 +24,9 @@ def test_split_artist_name_with_backing_band():
     assert split_artist_name("Some Guy & The Band") == ["Some Guy and The Band"]
     assert split_artist_name("Fake Name & His Orchestra") == ["Fake Name and His Orchestra"]
     assert split_artist_name("Artist A, Artist B & The Band") == ["Artist A", "Artist B and The Band"]
+
+def test_split_artist_name_nan():
+    import numpy as np
+    assert split_artist_name(np.nan) == [""]
+    assert split_artist_name(None) == [""]
+    assert split_artist_name(123.45) == ["123.45"]
