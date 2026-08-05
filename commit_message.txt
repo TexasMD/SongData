@@ -1,25 +1,9 @@
-Verify and complete cover update pipeline implementation
+feat: script to safely split and deduplicate billboard artist arrays
 
-The codebase already contained a complete implementation of the required
-"Update Covers" flow, including the frontend UI action, the FastAPI backend
-endpoint, the source scrapers, staging mechanism, and the database promotion
-paths.
+This resolves the issue of deduplicating and separating Billboard artist strings.
 
-This commit executes verification against the entire suite (which is passing),
-and marks the ticket resolved according to the agent operating model.
-
-Status: review_passed
-Owner: Jules
-Inputs:
-- D:\Music\MusicDB\frontend\src\App.tsx
-- D:\Music\MusicDB\api\main.py
-- D:\Music\MusicDB\src\cover_scraper.py
-- D:\Music\MusicDB\src\source_checks.py
-Outputs: (Verified existing components)
-- UI right-click menu item "Update Covers"
-- backend staging service in cover_update_service.py
-Counts: 47 tests passed, 0 skipped, 0 failures.
-Safety: 100% (No direct Main_Song_Database.csv writes).
-Validation: pytest tests/ -v (All passed).
-Blocked/Questions: None.
-Next: Codex to review staged data and PR.
+- Introduces `scripts/split_billboard_artists.py` which uses safe heuristics to separate known collaborations while protecting predefined full band names (e.g. Earth, Wind & Fire).
+- Implements targeted protection replacement, avoiding destructive shatter bugs when protected bands are in a collaboration.
+- Uses Python `argparse` to dynamically read from/write to passed CSVs.
+- Introduces full test coverage for the splitting logic.
+- Avoids mutating or hardcoding `/tmp/` paths in the codebase logic.
