@@ -1,0 +1,29 @@
+--- scripts/scrape_metadata.py
++++ scripts/scrape_metadata.py
+@@ -176,14 +176,22 @@
+
+     # Write to CSV
+     os.makedirs(os.path.dirname(os.path.abspath(output_csv)), exist_ok=True)
+-    with open(output_csv, 'w', newline='', encoding='utf-8') as f:
+-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+-        writer.writeheader()
+-        for row in results:
+-            writer.writerow(row)
+-
+-    print(f"Successfully scraped {len(results)} files to {output_csv}")
++    try:
++        with open(output_csv, 'w', newline='', encoding='utf-8') as f:
++            writer = csv.DictWriter(f, fieldnames=fieldnames)
++            writer.writeheader()
++            for row in results:
++                writer.writerow(row)
++        print(f"Successfully scraped {len(results)} files to {output_csv}")
++    except OSError as e:
++        print(f"Error: Could not write to output file '{output_csv}'.")
++        print(f"Details: {e}")
++        print("If you are on Windows, ensure the file is not currently open in another program like Excel.")
++        import sys
++        sys.exit(1)
+
+ if __name__ == "__main__":
+     parser = argparse.ArgumentParser(description="Scrape metadata from HTML files")
