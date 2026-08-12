@@ -182,13 +182,19 @@ def scrape_directory(input_dir, output_csv):
 
     # Write to CSV
     os.makedirs(os.path.dirname(os.path.abspath(output_csv)), exist_ok=True)
-    with open(output_csv, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in results:
-            writer.writerow(row)
-
-    print(f"Successfully scraped {len(results)} files to {output_csv}")
+    try:
+        with open(output_csv, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in results:
+                writer.writerow(row)
+        print(f"Successfully scraped {len(results)} files to {output_csv}")
+    except OSError as e:
+        print(f"Error: Could not write to output file '{output_csv}'.")
+        print(f"Details: {e}")
+        print("Please ensure you have write permissions and the file is not open in another program.")
+        import sys
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Scrape metadata from HTML files")
