@@ -137,7 +137,7 @@ spacing:
 *   **Selection:** Checkbox column (`w-10`) with `var(--color-primary)` fill on active.
 
 ### Filter Matrix Builder (Boolean Logic)
-*   **Logic Connectors:** Vertical lines connecting rows. 
+*   **Logic Connectors:** Vertical lines connecting rows.
     *   `AND` = `var(--color-primary)`
     *   `OR` = `var(--color-accent)`
 *   **Inputs:** Compact `h-7` (28px) inputs and dropdowns.

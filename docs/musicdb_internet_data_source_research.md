@@ -442,4 +442,3 @@ Promote only when:
 1. Define promotion rules.
 2. Review source registry.
 3. Build accepted-candidate apply scripts with backups.
-

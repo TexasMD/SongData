@@ -18,16 +18,16 @@ DB_PATH = STAGING_DIR / "poc.sqlite"
 
 def create_sqlite_poc():
     print(f"Generating SQLite Proof of Concept at: {DB_PATH}")
-    
+
     # Ensure staging directory exists
     os.makedirs(STAGING_DIR, exist_ok=True)
-    
+
     # Remove existing POC if it exists to start fresh
     if DB_PATH.exists():
         os.remove(DB_PATH)
-        
+
     conn = sqlite3.connect(DB_PATH)
-    
+
     try:
         # Load and write Recordings
         if RECORDINGS_CSV.exists():
@@ -56,10 +56,10 @@ def create_sqlite_poc():
             df_play = pd.read_csv(PLAYLIST_MEMBERSHIP_CSV, encoding='utf-8-sig', dtype=str)
             df_play.to_sql("playlist_membership", conn, if_exists="replace", index=False)
             print(f" -> Inserted {len(df_play)} rows into 'playlist_membership' table.")
-            
+
         print("\nSQLite PoC generation complete!")
         print("Note: This DB is strictly for export/viewing. The CSV remains the Source of Truth.")
-        
+
     except Exception as e:
         print(f"Error generating SQLite DB: {e}")
     finally:

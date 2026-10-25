@@ -172,4 +172,3 @@ Rules:
 - Prefer exact connected pages over generic search snippets where possible.
 - Do not overwrite the active main database directly.
 ```
-
