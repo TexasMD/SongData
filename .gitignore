@@ -43,3 +43,12 @@ SongDB_v2/youtube_music_takeout_*.csv
 SongDB_v2/youtube_music_takeout_*.json
 data/source_metadata_matrix.csv
 docs/source_metadata_matrix_expanded.csv
+# SHS Parser local corpus, scratch scripts, and generated outputs
+SHSmetadataScrapingGuide/
+*.sqlite
+shs_parsed_archetypes_output.csv
+excluded_adaptations.csv
+fix_*.py
+patch_*.py
+plan_helpers.py
+fields.json
