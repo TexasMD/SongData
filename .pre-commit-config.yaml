@@ -3,8 +3,5 @@ repos:
     rev: v2.3.0
     hooks:
     -   id: check-yaml
-        exclude: '^(\.github/|SHSmetadataScrapingGuide/)'
     -   id: end-of-file-fixer
-        exclude: '^(\.github/|SongDB_v2/|backups/|data/|docs/|frontend/|playlists/|stitch/|SHSmetadataScrapingGuide/|.*\.(csv|html|htm|sqlite|json|svg|txt)$)'
     -   id: trailing-whitespace
-        exclude: '^(\.github/|SongDB_v2/|backups/|data/|docs/|frontend/|playlists/|stitch/|SHSmetadataScrapingGuide/|.*\.(csv|html|htm|sqlite|json|svg|txt)$)'
