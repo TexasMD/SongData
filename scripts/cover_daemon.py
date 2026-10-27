@@ -90,10 +90,10 @@ def init_daemon():
 def run_daemon(batch_size: int = 25):
     print(f"Starting cover daemon (batch size: {batch_size})...")
     init_daemon()
-
+    
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
-
+    
     # Get recordings that haven't been checked yet
     cursor = conn.cursor()
     cursor.execute(f'''
@@ -103,7 +103,7 @@ def run_daemon(batch_size: int = 25):
         WHERE log.recording_id IS NULL
         LIMIT {batch_size}
     ''')
-
+    
     recordings_to_check = cursor.fetchall()
 
     if not recordings_to_check:
@@ -127,12 +127,12 @@ def run_daemon(batch_size: int = 25):
                 last_result_count=result_count,
                 checked_at=checked_at,
             )
-
+        
         print(f"Checking '{title}' by '{artist}'...")
-
+        
         try:
             covers = scrape_covers(title, artist, original_year, on_source_checked=on_source_checked)
-
+            
             if covers:
                 cover_tuples = [
                     (
@@ -159,17 +159,17 @@ def run_daemon(batch_size: int = 25):
                     """,
                     cover_tuples
                 )
-
+            
             conn.execute(
                 "INSERT INTO antigravity_cover_daemon_log (recording_id, covers_found) VALUES (?, ?)",
                 (rec_id, len(covers))
             )
             conn.commit()
             print(f"  -> Found {len(covers)} covers.")
-
+            
         except Exception as e:
             print(f"  -> Error processing {rec_id}: {e}")
-
+            
         # Add a sleep to be extremely polite to MusicBrainz
         time.sleep(2)
 

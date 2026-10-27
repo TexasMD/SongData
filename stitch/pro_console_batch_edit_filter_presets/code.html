@@ -107,7 +107,7 @@
             margin: 0;
             overflow: hidden; /* App-like feel */
         }
-
+        
         /* Scrollbar styling for industrial feel */
         ::-webkit-scrollbar {
             width: 8px;
@@ -123,7 +123,7 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #5c4037;
         }
-
+        
         .waveform-mini {
             display: flex;
             align-items: center;
@@ -138,17 +138,17 @@
         .waveform-bar:nth-child(even) { animation-duration: 0.8s; background-color: #ffb59e; opacity: 0.7; }
         .waveform-bar:nth-child(3n) { animation-duration: 1.2s; }
         .waveform-bar:nth-child(4n) { animation-duration: 0.6s; opacity: 0.5; }
-
+        
         @keyframes pulse {
             0% { height: 2px; }
             100% { height: 14px; }
         }
-
+        
         .grid-container {
             display: grid;
             grid-template-columns: 40px 100px 250px 180px 80px 120px 100px 1fr;
         }
-
+        
         .cell {
             padding: 0 var(--spacing-cell-padding-x);
             border-right: 1px solid #2A2A2E;
@@ -159,21 +159,21 @@
             white-space: nowrap;
             text-overflow: ellipsis;
         }
-
+        
         .cell:last-child {
             border-right: none;
         }
-
+        
         .header-cell {
             border-bottom: 1px solid #5c4037;
             background-color: #141416;
             cursor: col-resize;
         }
-
+        
         .row-hover:hover {
             background-color: #1C1C1F; /* surface-hover */
         }
-
+        
         .row-selected {
             background-color: rgba(255, 181, 158, 0.05);
             border-left: 2px solid #ffb59e;
@@ -204,7 +204,7 @@
         input[type="checkbox"]:checked::before {
             transform: scale(1);
         }
-
+        
         #cmd-palette {
             display: none;
         }
@@ -535,7 +535,7 @@
                 document.getElementById('cmd-palette').classList.remove('active');
             }
         });
-
+        
         document.getElementById('cmd-palette').addEventListener('click', (e) => {
             if(e.target === document.getElementById('cmd-palette')) {
                 document.getElementById('cmd-palette').classList.remove('active');

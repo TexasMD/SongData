@@ -21,15 +21,15 @@ USER_AGENT = "MusicDB-Enrichment-Daemon/1.0 ( seth@example.com )"
 
 def ensure_file_headers():
     STAGING_DIR.mkdir(parents=True, exist_ok=True)
-
+    
     if not MOOD_CSV.exists():
         with open(MOOD_CSV, 'w', newline='', encoding='utf-8-sig') as f:
             csv.writer(f).writerow(["Recording ID", "Suggested Mood Tags", "Suggested Event Tags", "Suggested Situation Tags", "Source URL", "Confidence", "Notes"])
-
+            
     if not PERF_CSV.exists():
         with open(PERF_CSV, 'w', newline='', encoding='utf-8-sig') as f:
             csv.writer(f).writerow(["Recording ID", "BPM", "Key", "Tuning", "Capo", "Guitar Difficulty", "Bass Difficulty", "Drum Difficulty", "Vocal Range", "Instrumentation", "Arrangement Notes", "Source URL", "Confidence", "Notes"])
-
+            
     if not EXT_CSV.exists():
         with open(EXT_CSV, 'w', newline='', encoding='utf-8-sig') as f:
             csv.writer(f).writerow(["Recording ID", "Site", "Verified URL", "Search URL", "Match Type", "Confidence", "Notes"])
@@ -78,71 +78,71 @@ def fetch_musicbrainz_tags(artist, title):
 def run_daemon():
     print("Starting MusicDB Enrichment Daemon...")
     ensure_file_headers()
-
+    
     # Load all targets
     targets = []
     with open(ACTIVE_CSV, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             targets.append(row)
-
+            
     total_targets = len(targets)
     processed_ids = get_processed_ids()
     current_count = len(processed_ids)
-
+    
     print(f"Total rows: {total_targets}. Already processed: {current_count}. Remaining: {total_targets - current_count}")
     write_status(current_count, total_targets, "None", "None")
-
+    
     # Open files in append mode
     with open(MOOD_CSV, 'a', newline='', encoding='utf-8-sig') as f_mood, \
          open(PERF_CSV, 'a', newline='', encoding='utf-8-sig') as f_perf, \
          open(EXT_CSV, 'a', newline='', encoding='utf-8-sig') as f_ext, \
          open(SOURCE_CHECKS_CSV, 'a', newline='', encoding='utf-8-sig') as f_checks:
-
+         
         writer_mood = csv.writer(f_mood)
         writer_perf = csv.writer(f_perf)
         writer_ext = csv.writer(f_ext)
         writer_checks = csv.writer(f_checks)
-
+        
         for row in targets:
             rec_id = row.get("Recording ID")
             if rec_id in processed_ids:
                 continue
-
+                
             artist = row.get("Artist", "")
             title = row.get("Title", "")
-
+            
             # Fetch tags
             tags, url = fetch_musicbrainz_tags(artist, title)
             checked_at = datetime.now(timezone.utc).isoformat()
             writer_checks.writerow([rec_id, "MusicBrainz", "tag_lookup", checked_at, 1, len(tags), url, "Queried for tagging enrichment"])
             # Dummy categorization for the prototype
             moods = [t for t in tags if t in ['sad', 'happy', 'chill', 'angry']]
-
+            
             writer_mood.writerow([rec_id, ", ".join(moods), "", "", url, "Medium" if tags else "Low", "Queried from MusicBrainz"])
-
+            
             # Performance metadata (mock generative baseline)
             writer_perf.writerow([rec_id, row.get('BPM', ''), row.get('Key', ''), "Standard", "None", "Intermediate", "Novice", "Novice", "", "Vocals, Guitar, Bass, Drums", "Standard arrangement", "Generative Suggestion", "Low", "Requires manual tuning"])
-
+            
             # External URLs
             q = quote_plus(f"{artist} {title}")
             writer_ext.writerow([rec_id, "Ultimate Guitar", "", f"https://www.ultimate-guitar.com/search.php?search_type=title&value={q}", "Search Query", "Low", "Generated search URL"])
             writer_ext.writerow([rec_id, "SecondHandSongs", "", f"https://secondhandsongs.com/search?search_text={q}", "Search Query", "Low", "Generated search URL"])
             writer_ext.writerow([rec_id, "WhoSampled", "", f"https://www.whosampled.com/search/?q={q}", "Search Query", "Low", "Generated search URL"])
-
+            
             # Flush immediately so progress isn't lost if killed
             f_mood.flush()
             f_perf.flush()
             f_ext.flush()
             f_checks.flush()
-
+            
             current_count += 1
             if current_count % 10 == 0:
                 write_status(current_count, total_targets, artist, title)
-
+                
             # Sleep to respect rate limits (1 request per second for MusicBrainz)
             time.sleep(1.1)
-
+            
     print("Enrichment Daemon completed its run!")
     write_status(current_count, total_targets, "DONE", "DONE")
 

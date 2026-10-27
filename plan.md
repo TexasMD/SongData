@@ -1,39 +1,27 @@
-# Plan for `shs_universal_page_parser.py`
+1. **Create `tests/test_utils.py`:** Create a new test file to house tests for `src/utils.py`.
+2. **Implement Test Cases for `backup_file`:**
+    *   `test_backup_file_success`: Create a temporary file (using pytest's `tmp_path`), mock `src.utils.datetime` to produce a deterministic timestamp, call `backup_file`, verify the returned path, verify the backup file is created, and check that the contents match the original.
+    *   `test_backup_file_nonexistent`: Call `backup_file` on a file that does not exist and ensure it returns `""`.
+3. **Verify tests:** Run `PYTHONPATH=. pytest tests/test_utils.py` to ensure the new tests pass and catch potential bugs.
+4. **Pre-commit checks:** Complete pre commit steps to make sure proper testing, verifications, reviews and reflections are done.
+5. **Submit PR:** Create a commit and submit the branch with a descriptive message.
 
-1. **Setup & Initialization**:
-   - Create the script `shs_universal_page_parser.py`.
-   - Implement CLI using `argparse` with arguments for `--input-dir`, `--input-file`, `--output-csv`, `--workers`.
-   - Setup multithreading/multiprocessing support.
-   - Configure logging.
+## Product Goals
 
-2. **Stage 1: Intake & Document Fingerprinting**:
-   - Implement file reading with encoding fallback (try `utf-8`, then `ISO-8859-1`/`CP1252`).
-   - Extract canonical URL, meta `og:url` to uniquely identify the page entity and ID.
+Longer-term user-facing goals for the MusicDB system:
 
-3. **Stage 2: Entity Categorization & Routing**:
-   - Use regex on canonical URL to extract `shs_entity_type` (work, performance, artist, release, web_cover).
-   - If missing, fallback to data-controller, breadcrumbs, filename regex.
-   - Determine `is_all_versions_view` boolean based on url suffix `/all`.
-
-4. **Stage 3: Metadata Extraction Engine**:
-   - Write functions to extract metadata based on the 85-field specification (`shs_page_metadata_dictionary.csv`).
-   - Extract `h1` and page `<title>`.
-   - Extract definition list (`<dl>`) attributes mapping them correctly based on the entity type (e.g. `written_by`, `released_on`, `work_language`).
-   - Standardize dates using logic from `shs_dates.py`. Parse year/month/day. Remove `.0` floating point suffixes.
-   - Extract IDs correctly: `iswc`, `ipi`, `spotify_track_id`, etc.
-   - For `work` and `performance` pages, detect specific markers/badges (e.g., `is_first_release`, `is_instrumental`, `is_live`).
-
-5. **Stage 4: Data Processing & Business Rules**:
-   - Implement logic to handle conflicting fields or special cases (e.g. `adapted_from`, `uses_parts_from`, medley tracking).
-   - Address AARW classifications.
-
-6. **Stage 5: Output Generation**:
-   - Assemble a row of data containing the full 85-field schema.
-   - Handle export logic to CSV.
-   - Set up an audit queue output (`excluded_adaptations.csv`) for non-Latin / translations.
-
-7. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done**.
-
-8. **Test & Validation**:
-   - Run the script against the 20 archetype pages in `SHSmetadataScrapingGuide/` (using `--input-dir`).
-   - Generate `shs_parsed_archetypes_output.csv` and verify it contains all fields populated correctly.
+- import user-approved playlists directly from Spotify, iTunes, Amazon Music, and YouTube Music
+- incorporate those playlists into the database
+- link songs, artists, and albums to the user’s preferred media source platform
+- create mood-based, goal-based, event-based, and situation-based playlists
+- suggest music that the user does not already have in their history
+- find cover songs and related versions for music in the database
+- support user-created versions or arrangements of songs
+- provide links to lyrics and sheet music or tablature
+- show simplified keyboard guidance for songs
+- show visual pitch or note representations for vocals
+- require double verification of song metadata using at least two reputable sources
+- clean song metadata for font, symbol, and encoding problems
+- retain reference IDs from every source for title, performance, artist, album, and other useful entities
+- determine what metadata each primary source provides, including Spotify, iTunes, YouTube Music, cover.info, MusicBrainz, and Discogs
+- maintain a cleaned, reliable reference-ID database that can be published as a web-reachable source of truth
